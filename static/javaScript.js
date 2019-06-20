@@ -1,6 +1,8 @@
 
 var map = L.map('map').setView([20, 0], 3);
-L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
+L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', 
+                {attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'}
+            ).addTo(map);
 
 var myLines = [{
     "type": "LineString",
@@ -10,8 +12,9 @@ var myLines = [{
     "coordinates": [[-105, 40], [-110, 45], [-115, 55]]
 }];
 
-var myLayer = L.geoJSON().addTo(map);
-myLayer.addData(geojsonFeature);
+L.geoJSON().addTo(map);
+//var myLayer = L.geoJSON().addTo(map);
+//myLayer.addData(geojsonFeature);
 
 function msg(){  
     alert("This website needs some more features");  
