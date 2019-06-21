@@ -19,11 +19,12 @@ def home():
 def index():
     return render_template('index.html')
 
-#@app.route('/keys')
-#def read_nc_data():
-#    nc = Dataset('/home/even/netCDFdata/samples_NSEW_2013.03.11.nc')
-#    keys = list(nc.variables.keys())
-#    return render_template("keys.html", len = len(keys), keys = keys)
+
+#@app.route('/getgeojson')
+#def get_geojson():
+    # use a netcdf to json script (e.g. "netcdf2geojson.py") which will
+    # decode the netcdf file and insert the data into a template html file
+    # return the HTML file for rendering 
     
 
 if __name__ == '__main__':
