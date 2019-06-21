@@ -76,27 +76,29 @@ def create_polygons(root, geojson):
 		}
 	}
 
-    #for i in range(xlen):
-        #for j in range(ylen):
-            #target["features"] = 
-            #lat = lats[i,j]
-            #lon = lons[i,j]
-            #innerlist.append([float(lat), [float(lat)])
+    for i in range(xlen):
+        for j in range(ylen):
+            target["features"] = 
+            lat = float(lats[i,j])
+            lon = float(lons[i,j])
+            innerlist.append([float(lat), [float(lat)])
 
 geojson = {
 	"type": "FeatureCollection",
 	"features": []
 }
 
-my_file = "single_polygon.json"
+my_file = "grid.json"
+netcdfpath = "/media/sf_shared/netCDFdata/samples_NSEW_2013.03.11.nc"
+
 if os.path.isfile(my_file):
     os.remove(my_file)
-target = open("single_polygon.json", 'w')
-source = Dataset("/home/even/netCDFdata/samples_NSEW_2013.03.11.nc", 
-                    "r", format="NETCDF4")
+target = open(my_file, 'w')
+source = Dataset(netcdfpath, "r", format="NETCDF4")
 
 create_polygons(source, geojson)
 json.dump(geojson, target)
+
 source.close()
 target.close()
 
