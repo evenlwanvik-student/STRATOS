@@ -8,19 +8,26 @@ def geojson(source, target):
     lats = source['gridLats']
     lons = source['gridLons']
     tmps = source['temperature'][0,0,:]
-    #print(lats)
-    #print(tmp)
+
     lons_list = [] 
     lats_list = []
 
-    #print tmps[293,1]
+    # We will iterate over the edges of each square
+    edgenode = (221-1,19-1) # -1 since indexing starts at 0 , we actualy want (221,19)
 
-    for i in range(19-1,20):
-        for j in range(222, 221-1, -1): # +1 since the arrays has index 0 as well
-            tmp = float(tmps[j,i]) # (yc: 294, xc: 291), i.e. i and j is swapped
-            #print float(lats[i,j])
-            #print float(lons[i,j])
-            print tmp
+    squaresize = 2
+    squarerange = range(squaresize)
+    for i in squarerange:
+        innerrange = squarerange
+        if i == 1:
+            innerrange = reversed(squarerange)
+        for j in innerrange:
+            xy = (edgenode[0]+i, edgenode[1]+j)
+            tmp  = float(tmps[xy])
+            lat  = float(lats[xy])
+            lon  = float(lons[xy])
+            print [lat, lon]
+
 
 
 
