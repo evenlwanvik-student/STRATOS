@@ -9,7 +9,7 @@ Check for existing images in the container: sudo docker ps -a
 To stop and remove existing images: sudo bash stop.sh
 
 todo: 
-* Insert dependencies into requirements: pandas, xarray, scipy, json, numpy
+* Insert dependencies into requirements: xarray, scipy, json, numpy
 
 https://stackoverflow.com/questions/51897078/plotting-global-gridded-netcdf-data-onto-a-web-map
 

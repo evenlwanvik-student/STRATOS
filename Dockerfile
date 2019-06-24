@@ -13,8 +13,10 @@ COPY . /app
 WORKDIR /app
 RUN pip install -r requirements.txt
 
+# these paths
 ENV STATIC_URL /static
-ENV STATIC_PATH /home/even/Workspaces/STRATOS/app/static
+ENV STATIC_PATH $WORKDIR/static
+#ENV STATIC_PATH /home/even/Workspaces/STRATOS/app/static
 
 ENTRYPOINT ["python"]
 CMD ["app.py"]
