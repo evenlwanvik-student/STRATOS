@@ -4,6 +4,7 @@ from flask import Flask, render_template, jsonify
 from netCDF4 import Dataset
 import numpy as np
 import json
+import os
 
 app = Flask(__name__)
 
@@ -19,12 +20,15 @@ def home():
 def index():
     return render_template('index.html')
 
+@app.route('/getgeojson')
+def getegeojson():
+    return render_template('geojson.html')
 
-#@app.route('/getgeojson')
-#def get_geojson():
-    # use a netcdf to json script (e.g. "netcdf2geojson.py") which will
-    # decode the netcdf file and insert the data into a template html file
-    # return the HTML file for rendering 
+#@app.route('/keys')
+#def read_nc_data():
+#    nc = Dataset('/home/even/netCDFdata/samples_NSEW_2013.03.11.nc')
+#    keys = list(nc.variables.keys())
+#    return render_template("keys.html", len = len(keys), keys = keys)
     
 
 if __name__ == '__main__':
