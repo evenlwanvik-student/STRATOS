@@ -12,8 +12,13 @@ todo:
 * Insert dependencies into requirements: xarray, scipy, json, numpy
 
 ```python
-s = "Python syntax highlighting"
-print s
+from azure.storage.blob import BlockBlobService
+storage = BlockBlobService(account_name='myname', account_key = 'mykey')
+file = storage.get_blob_to_stream('accountname','blobname','stream')
+df = pd.read_csv(file)
 ```
+
+https://stackoverflow.com/questions/54408738/how-to-use-get-file-properties-rest-api-for-azure-files-storage-using-python
+https://stackoverflow.com/questions/49467961/python-script-to-use-data-from-azure-storage-blob-by-stream-and-update-blob-by
 
 Authors: Even Wanvik and Maria Skårdal
