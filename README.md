@@ -11,9 +11,9 @@ This is a temporary structure for displaying a single netcdf file in web page.
 todo: 
 * Insert dependencies into requirements: xarray, scipy, json, numpy
 
-`
-def test():
-  for 
-'
+```python
+s = "Python syntax highlighting"
+print s
+```
 
 Authors: Even Wanvik and Maria Skårdal
