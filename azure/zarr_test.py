@@ -15,6 +15,7 @@ def get_encoding(name):
     '''
     ds = xr.open_zarr(name)
     encoding = {name: ds[name].encoding for name in list(ds.variables)}
+    print encoding
     return encoding
 
 

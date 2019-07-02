@@ -3,6 +3,7 @@ from azure import *
 from azure.storage import *
 import zarr
 import xarray as xr
+import shutil
 
 class zarrABSStore():
     '''
@@ -56,24 +57,38 @@ class zarrABSStore():
 
 
 
-def create_zarr(netCDF_path=None, zarr_path=None):
-    with xr.open_dataset(netCDF_path) as nc:
-        nc.to_zarr(zarr_path)
-        #print nc
+def create_zarr(netCDF_path=None, zarr_path='./default.zarr', chunks={'time':1, 'xc': 291, 'yc': 294, 'zc': 1}):
+    with xr.open_dataset(netCDF_path, chunks=chunks) as nc:
+        print nc
+        try:
+            shutil.rmtree(zarr_path)
+        except OSError as e:
+            print ("Error: %s - %s." % (e.filename, e.strerror))
+        return nc.to_zarr(zarr_path)
 
 
 
+#netCDF_test_path    = "/home/even/netCDFdata/tos_O1_2001-2002.nc"
 netCDF_path    = "/home/even/netCDFdata/samples_NSEW_2013.03.11.nc"
 CONTAINER_NAME = 'zarr'
 BLOB_NAME      = 'Franfjorden32m/samples_NSEW_2013.03.11.zarr'
 ACCOUNT_NAME   = 'stratos'
 ACCOUNT_KEY    = 'A7nrOYKyq6y2GLlprXc6tmd+olu50blx4sPjdH1slTasiNl8jpVuy+V0UBWFNmwgVFSHMGP2/kmzahXcQlh+Vg=='
 LOCAL_ZARR     = 'data/Franfjorden32m/test.zarr'
-LOCAL_ZARR2    = 'data/2Franfjorden32m/test.zarr'
+#LOCAL_ZARR2    = 'data/2Franfjorden32m/test.zarr'
 
 
-create_zarr(netCDF_path, LOCAL_ZARR2)
-#my_zarr = zarrABSStore(CONTAINER_NAME, BLOB_NAME, ACCOUNT_NAME, ACCOUNT_KEY)
+
+#chunks = {'time': 72}#, 'xc': 291, 'yc': 294, 'zc': 1}
+#print create_zarr(netCDF_path, LOCAL_ZARR, chunks)
+
+# initialize azure blob service for our zarr array
+my_zarr = zarrABSStore(CONTAINER_NAME, BLOB_NAME, ACCOUNT_NAME, ACCOUNT_KEY)
+# remove existing zarr array
+my_zarr.rmdir()
+# create blob from local zarr array
+my_zarr.create_blob(LOCAL_ZARR)
+
 #xr = xarray.open_zarr(x.my_zarr)
 
 
