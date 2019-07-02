@@ -1,0 +1,16 @@
+{
+    "_ARRAY_DIMENSIONS": [],
+    "false_easting": 2234512.0,
+    "false_northing": 1816288.0,
+    "grid_mapping_name": "polar_stereographic",
+    "horizontal_resolution": 32.0,
+    "latitude_of_projection_origin": 90.0,
+    "longitude_of_projection_origin": 58.0,
+    "origoRef": [
+        0.0,
+        0.0
+    ],
+    "scale_factor_at_projection_origin": 1.0,
+    "standard_parallel": 60.0,
+    "straight_vertical_longitude_from_pole": 58.0
+}

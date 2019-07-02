@@ -1,0 +1,8 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "yc"
+    ],
+    "_CoordinateAxisType": "GeoY",
+    "standard_name": "projection_y_coordinate",
+    "units": "meter"
+}

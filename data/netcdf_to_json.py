@@ -5,8 +5,8 @@ import os
 from copy import deepcopy
 import time # for execution time testing
 import math
-
-from color_encoding import temp_to_rgb
+import sys
+from data.color_encoding import temp_to_rgb
 
 '''
  1. load template geojson file as DATA
@@ -37,13 +37,14 @@ these were the 2x2 grid with the largest differences in temperature (about 0.5-1
 '''
 
 # define paths to files
-initial_template_path = "templates/initial_template.json"
-feature_template_path = "templates/feature_template.json"
-source_path = "/home/even/netCDFdata/samples_NSEW_2013.03.11.nc"
-output_path = "outputs/surface_temp.json"
+initial_template_path = "data/templates/initial_template.json"
+feature_template_path = "data/templates/feature_template.json"
+source_path = "/data/samples_NSEW_2013.03.11.nc" 
+#/data tells the container to go to the root and look for the folder "data", where the netCDF file is mounted using volume
+output_path = "data/outputs/surface_temp.json"
 
 
-def geojson_grid_coord(target, lats, lons, startEdge):
+def geojson_grid_coord(lats, lons, startEdge):
     '''
     takes a xarray object of a netCDF file as source and variable loaded
     with a geojson dictionary template as target. 
@@ -58,34 +59,31 @@ def geojson_grid_coord(target, lats, lons, startEdge):
     3. x-direction 
     always iterate over polygonedges and squares in the same convention as in moduledescription
     '''
-    
-    coord_list = []
-
-    xyRange = range(2)    # the box is 2x2, i.e. dimension of one side is 2
-    polyEdgeIdx = 0             # The current index of the polygon square
-    
+    # output list
+    coords = []
+    # the box is 2x2, this will be made dynamic in the future
+    xyRange = range(2)              
+    # Index of the polygon square
+    polyEdgeIdx = 0 
     for y in xyRange:           # iterate y
         innerRange = xyRange              
         if y == 1:
             innerRange = reversed(xyRange)     # backward iteration to complete the polygon
         for x in innerRange: # iterate x
-            yx = (startEdge[0]+y-1, startEdge[1]+x-1) # (y,x) defined as such in the netCDF file
+            yx = (startEdge[0]+y, startEdge[1]+x) # (y,x) defined as such in the netCDF file
             lat  = float(lats[yx])
             lon  = float(lons[yx])
             # OBS! The GIS lat/lon is different from geojson standard, so these are "flipped"
-            target['geometry']['coordinates'][0][polyEdgeIdx][0] = lon 
-            target['geometry']['coordinates'][0][polyEdgeIdx][1] = lat
-            if polyEdgeIdx == 4: # the last list must always be the same as the first
-                target['geometry']['coordinates'][0][4][0] = lon
-                target['geometry']['coordinates'][0][4][1] = lat
+            coords.append([lon, lat])
             polyEdgeIdx += 1
-    
-    return coord_list
+    # the last list must always be the same as the first 
+    coords.append(coords[0])      
+    return coords
 
 
-def geojson_grid_temp(T_in, T0=272, T1=282):
+def geojson_grid_temp(T_in):
     ''' Get T from T_in if not nan, convert to RGB hex and insert into T_out reference'''
-    return temp_to_rgb(T_in,T0,T1)
+    return temp_to_rgb(T_in)
 
 
 def get_initial_template():
@@ -108,15 +106,19 @@ def write_output(data):
         json.dump(data, output, indent=4)    
 
 
-def netcdf_to_json(startEdge=(0,0), nGrids=10, gridSize=1, T0=275.8, T1=279.5):
+def netcdf_to_json(startEdge=(0,0), 
+                    nGrids=10, 
+                    gridSize=1, 
+                    layerIdx=0,
+                    timeIdx=0,
+                    ):
     ''' 
     Inserts netCDF data from 'startEdge' in a square of size 'nGrids' in positive lat/lon
     index direction into a geojson whose path is described as output. 
     It appends geojson template dictionaries from a given file-path into a 
     temporary data variable, whose data is changed and dumped into output file..
     '''
-
-    start = time.time()
+    start = time.time() 
 
     # Get the initial template, the data variable will hold all temporary data
     data = get_initial_template() 
@@ -125,7 +127,8 @@ def netcdf_to_json(startEdge=(0,0), nGrids=10, gridSize=1, T0=275.8, T1=279.5):
 
     # Create local copies of subsets for further use, much faster to access
     with xr.open_dataset(source_path) as source: 
-        temps = deepcopy(source['temperature'][0,0])#[::gridSize,::gridSize])
+        # Fetching larger grids took way longer, as it probably has to do it element-by-element
+        temps = deepcopy(source['temperature'][timeIdx,layerIdx])#[::gridSize,::gridSize])
         lats = deepcopy(source['gridLats'])#[::gridSize,::gridSize])
         lons = deepcopy(source['gridLons'])#[::gridSize,::gridSize])
 
@@ -146,19 +149,17 @@ def netcdf_to_json(startEdge=(0,0), nGrids=10, gridSize=1, T0=275.8, T1=279.5):
                 feature = data['features'][featureIdx]
                 # insert hex into fill
                 feature['properties']['fill'] = geojson_grid_temp(temp) 
-                # copying netcdf data into the goven feature position                     
-                geojson_grid_coord(feature, 
-                                    lats, 
-                                    lons, 
-                                    edge)                 
-                #coordinates = feature['geometry']['coordinates'][0][polyEdgeIdx][0]
-
+                # copying netcdf data into the goven feature position
+                feature['geometry']['coordinates'][0] = geojson_grid_coord(lats, lons, edge)                 
+                #print data['features'][featureIdx]['geometry']['coordinates'][0][0]
                 featureIdx = featureIdx + 1
 
-    write_output(data)    
+    print("::::: showing surface temperature")
+    print("::::: -> startEdge:",startEdge,"nGrids:",nGrids,"layerIdx:",layerIdx,"timeIdx:",timeIdx)
+    write_output(data)
 
-    end = time.time()       
-    print end-start   
+    end = time.time()
+    print("::::: execution time:",end-start)
 
 ''' 
 One example of reducing the load of taking the whole source file as xarray could 

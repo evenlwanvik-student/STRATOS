@@ -1,0 +1,11 @@
+{
+    "SINMODVarID": 22,
+    "_ARRAY_DIMENSIONS": [
+        "yc",
+        "xc"
+    ],
+    "_CoordinateAxisType": "Lon",
+    "axis": "X",
+    "standard_name": "longitude",
+    "units": "degrees_east"
+}
