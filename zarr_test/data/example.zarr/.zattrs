@@ -1,0 +1,15 @@
+{
+    "Conventions": "CF-1.0",
+    "cmor_version": 0.9599999785423279,
+    "comment": "Test drive",
+    "contact": "Sebastien Denvil, sebastien.denvil@ipsl.jussieu.fr",
+    "experiment_id": "SRES A2 experiment",
+    "history": "YYYY/MM/JJ: data generated; YYYY/MM/JJ+1 data transformed  At 16:37:23 on 01/11/2005, CMOR rewrote data to comply with CF standards and IPCC Fourth Assessment requirements",
+    "institution": "IPSL (Institut Pierre Simon Laplace, Paris, France)",
+    "project_id": "IPCC Fourth Assessment",
+    "realization": 1,
+    "references": "Dufresne et al, Journal of Climate, 2015, vol XX, p 136",
+    "source": "IPSL-CM4_v1 (2003) : atmosphere : LMDZ (IPSL-CM4_IPCC, 96x71x19) ; ocean ORCA2 (ipsl_cm4_v1_8, 2x2L31); sea ice LIM (ipsl_cm4_v",
+    "table_id": "Table O1 (13 November 2004)",
+    "title": "IPSL  model output prepared for IPCC Fourth Assessment SRES A2 experiment"
+}
