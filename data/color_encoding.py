@@ -3,6 +3,7 @@ import matplotlib.colors as mplcolors
 import numpy as np
 import xarray as xr
 from copy import deepcopy
+import zarr
 
 '''
 For now this module only converts temperature, but the road to making it
@@ -73,7 +74,8 @@ def temp_to_rgb(T, start_hex=START_SPECTRUM, finish_hex=END_SPECTRUM, n=N):
     ''' performs a conversion of the input temperature in kelvin
         to a six-digit rgb color string '''
     if (T < meas_min) or (T > meas_max):
-        raise ValueError("'T' is outside of boundary: T_min < T < T_max")
+        print("'T' is outside of boundary: T_min < T < T_max")
+        RGB_hex = RGB_to_hex((0,0,0))
     else:
         s = hex_to_RGB(start_hex)
         f = hex_to_RGB(finish_hex)
@@ -125,12 +127,15 @@ def set_colormap_range():
     global meas_max
     global meas_min
     
-    with xr.open_dataset(source_path) as source:
-        temps = deepcopy(source['temperature'])
-    
-    meas_min = float(source['temperature'].min())
+    #with xr.open_dataset(source_path) as source:
+    #    temps = deepcopy(source['temperature'])
+    ZARR_PATH       = 'zarr_test/data/chunked.zarr'
+    source = zarr.open(ZARR_PATH, 'r')
+    meas_min = 276
+    #meas_min = float(source['temperature'].min())
     print("::::: minimum measurement found:",meas_min)
-    meas_max = float(source['temperature'].max())
+    #meas_max = float(source['temperature'].max())
+    meas_max = 282
     print("::::: maximum measurement found:",meas_max)
 
 

@@ -31,7 +31,7 @@ def index():
 def location():
     zoom = returnZoom()  # this function needs to depend on number of grids
     return render_template('index.html', 
-        name = 'Frænfjorden', #Hardcoded, get from form maybe?
+        name = 'Franfjorden', #Hardcoded, get from form maybe?
         lat = 62.8133,    #Hardcoded at the moment, should be easy to read
         long = 7.0035,
         zoom = zoom,

@@ -1,0 +1,11 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "time",
+        "zc",
+        "yc",
+        "xc"
+    ],
+    "_CoordinateAxes": "time zc yc xc",
+    "grid_mapping": "grid_mapping",
+    "units": "m/s"
+}

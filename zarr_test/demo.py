@@ -3,31 +3,23 @@ from azure.storage.blob import BlockBlobService
 from azure import *
 from azure.storage import *
 import zarr
-import xarray as xr
+import xarray
 
 
 netcdf_path = "data/example.nc"
 zarr_path   = "data/example.zarr"
-
-
 '''
 # Create local z-array from netcdf data
-with xr.open_dataset(netcdf_path) as data:
+with xarray.open_dataset(netcdf_path) as data:
     try:
         shutil.rmtree(zarr_path)
     except OSError as e:
         print ("Error: %s - %s." % (e.filename, e.strerror))
     data.to_zarr(zarr_path)
 '''
-
-
-
-''' Open zarr as xarray again, when we open it we can see that zarr
-automatically chose chunk sizes'''
-'''
-with xr.open_zarr(zarr_path) as data:
-    print(data)
-'''
+# hver gruppe er gitt en metadata fil og en eller flere komprimerte binaere filer ut fra hvordan vi har valgt aa chunke dataen
+#tree data/ -s
+#du -hs data/*
 
 
 '''
@@ -36,20 +28,20 @@ on what fields we want to extract, e.g. every time sample.
 Using smaller chunk sizes will use more space for metadata as it has e.g. 1-byte
 metadata per timestamp instead of one for the whole 24 elements.
 '''
+
 '''
-chunk = {'lat': 170, 'lon': 180, 'time': 1}
-with xr.open_dataset(netcdf_path, chunks=chunk) as data:
-    print("netCDF dataset: ", data)
+chunk = {'lat': 10, 'lon': 10, 'time': 5}
+
+encoding = {'my_variable': {'dtype': 'int16', 'scale_factor': 0.1,
+                               'zlib': True}}
+
+with xarray.open_dataset(netcdf_path, chunks=chunk) as data:
     try:
         shutil.rmtree(zarr_path)
     except OSError as e:
         print ("Error: %s - %s." % (e.filename, e.strerror))
     data.to_zarr(zarr_path)
 '''
-#tree data/ -s
-#du -hs data/*
-
-
 
 
 container  = 'zarr'
@@ -61,10 +53,10 @@ key        = 'A7nrOYKyq6y2GLlprXc6tmd+olu50blx4sPjdH1slTasiNl8jpVuy+V0UBWFNmwgVF
 # Create a Azure Blob Service object to the z-array stored in azure
 
 abs_object = zarr.storage.ABSStore(container, blob, account, key)
-'''
-with xr.open_zarr(zarr_path) as zr:
-    abs_object = zr
-'''
+
+# copy local zarr to azure cloud
+my_zarr = zarr.DirectoryStore("path/to/zarr")
+zarr.convenience.copy_store(my_zarr, abs_object)
 
 '''
 with xr.open_zarr(abs_object) as abs_zr:

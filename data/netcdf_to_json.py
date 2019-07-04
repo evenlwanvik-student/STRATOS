@@ -6,7 +6,11 @@ from copy import deepcopy
 import time # for execution time testing
 import math
 import sys
+import zarr
+
 from data.color_encoding import temp_to_rgb
+
+
 
 '''
  1. load template geojson file as DATA
@@ -125,12 +129,22 @@ def netcdf_to_json(startEdge=(0,0),
     # Get the feature template, this will be appended to data for each feature inserted
     feature_template = get_feature_template()
 
+    # temporary hardcoded blob
+    CONTAINER_NAME  = 'zarr'
+    BLOB_NAME       = 'Franfjorden32m/samples_NSEW_2013.03.11-chunked_time.zarr'
+    ACCOUNT_NAME    = 'stratos'
+    ACCOUNT_KEY     = 'A7nrOYKyq6y2GLlprXc6tmd+olu50blx4sPjdH1slTasiNl8jpVuy+V0UBWFNmwgVFSHMGP2/kmzahXcQlh+Vg=='
+    #ZARR_PATH       = 'zarr_test/data/chunked.zarr'
+
+    # Create a Azure Blob Service z-array object
+    absstore_zarr = zarr.storage.ABSStore(container, BLOB_NAME, account_name, account_key)
     # Create local copies of subsets for further use, much faster to access
-    with xr.open_dataset(source_path) as source: 
-        # Fetching larger grids took way longer, as it probably has to do it element-by-element
-        temps = deepcopy(source['temperature'][timeIdx,layerIdx])#[::gridSize,::gridSize])
-        lats = deepcopy(source['gridLats'])#[::gridSize,::gridSize])
-        lons = deepcopy(source['gridLons'])#[::gridSize,::gridSize])
+    #with xr.open_zarr(absstore_zarr) as source: 
+    source = zarr.open(absstore_zarr, 'r')
+    # Fetching larger grids took way longer, as it probably has to do it element-by-element
+    temps = deepcopy(source['temperature'][timeIdx,layerIdx])#[::gridSize,::gridSize])
+    lats = deepcopy(source['gridLats'])#[::gridSize,::gridSize])
+    lons = deepcopy(source['gridLons'])#[::gridSize,::gridSize])
 
     # featureIdx counts what feature we are working on = 0,1,2,3, ... 
     featureIdx = 0

@@ -89,8 +89,12 @@ start = time.time()
 
 # "None" chunks along the full dimension
 #chunks = {'time': 1, 'zc': 1, 'xc': None, 'yc': None}
-create_zarr(netCDF_path, ZARR_PATH)#, chunks)
+#create_zarr(netCDF_path, ZARR_PATH)#, chunks)
 
+absstore_zarr = zarr.storage.ABSStore(CONTAINER_NAME, BLOB_NAME, ACCOUNT_NAME, ACCOUNT_KEY)
+
+with xr.open_zarr(absstore_zarr, 'temperature') as source: 
+    print source
 
 '''
 # initialize azure blob service for our zarr array
