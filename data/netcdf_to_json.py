@@ -48,6 +48,18 @@ source_path = "/data/samples_NSEW_2013.03.11.nc"
 output_path = "data/outputs/surface_temp.json"
 
 
+# temporary hardcoded blob
+CONTAINER_NAME  = 'zarr'
+BLOB_NAME       = 'Franfjorden32m/samples_NSEW_2013.03.11_chunk-test-1.zarr'
+ACCOUNT_NAME    = 'stratos'
+ACCOUNT_KEY     = 'A7nrOYKyq6y2GLlprXc6tmd+olu50blx4sPjdH1slTasiNl8jpVuy+V0UBWFNmwgVFSHMGP2/kmzahXcQlh+Vg=='
+#ZARR_PATH       = 'zarr_test/data/chunked.zarr'
+
+# Create a Azure Blob Service z-array object
+print("::::: Fetching azure blob storage client")
+absstore_zarr = zarr.storage.ABSStore(CONTAINER_NAME, BLOB_NAME, ACCOUNT_NAME, ACCOUNT_KEY)
+
+
 def geojson_grid_coord(lats, lons, startEdge):
     '''
     takes a xarray object of a netCDF file as source and variable loaded
@@ -129,27 +141,22 @@ def netcdf_to_json(startEdge=(0,0),
     # Get the feature template, this will be appended to data for each feature inserted
     feature_template = get_feature_template()
 
-    # temporary hardcoded blob
-    CONTAINER_NAME  = 'zarr'
-    BLOB_NAME       = 'Franfjorden32m/samples_NSEW_2013.03.11-chunked_time.zarr'
-    ACCOUNT_NAME    = 'stratos'
-    ACCOUNT_KEY     = 'A7nrOYKyq6y2GLlprXc6tmd+olu50blx4sPjdH1slTasiNl8jpVuy+V0UBWFNmwgVFSHMGP2/kmzahXcQlh+Vg=='
-    #ZARR_PATH       = 'zarr_test/data/chunked.zarr'
-
-    # Create a Azure Blob Service z-array object
-    absstore_zarr = zarr.storage.ABSStore(container, BLOB_NAME, account_name, account_key)
+    print("::::: opening azure z-array blob as x-array")
     # Create local copies of subsets for further use, much faster to access
-    #with xr.open_zarr(absstore_zarr) as source: 
-    source = zarr.open(absstore_zarr, 'r')
-    # Fetching larger grids took way longer, as it probably has to do it element-by-element
-    temps = deepcopy(source['temperature'][timeIdx,layerIdx])#[::gridSize,::gridSize])
-    lats = deepcopy(source['gridLats'])#[::gridSize,::gridSize])
-    lons = deepcopy(source['gridLons'])#[::gridSize,::gridSize])
+    with xr.open_zarr(absstore_zarr) as source: 
+        # Fetching larger grids took way longer, as it probably has to do it element-by-element
+        print("::::: copying temperature data")
+        temps = deepcopy(source['temperature'][timeIdx,layerIdx])#[::gridSize,::gridSize])
+        print("::::: copying latitude data")
+        lats = deepcopy(source['gridLats'])#[::gridSize,::gridSize])
+        print("::::: copying longitude data")
+        lons = deepcopy(source['gridLons'])#[::gridSize,::gridSize])
 
     # featureIdx counts what feature we are working on = 0,1,2,3, ... 
     featureIdx = 0
     for y in range(nGrids):                 
         for x in range(nGrids):  
+            print("::::: grid ", featureIdx)
             # get the start edge of the next polygon to be inserted into dictionary
             edge = (startEdge[0]+y, startEdge[1]+x)       
             # if temp=nan: skip grid -> else: insert lat/lon and temp into data

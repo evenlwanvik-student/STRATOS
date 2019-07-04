@@ -88,13 +88,12 @@ NETCDF_PATH     = 'netcdf/Franfjorden32m/samples_NSEW_2013.03.11-chunked_coordin
 start = time.time()
 
 # "None" chunks along the full dimension
-#chunks = {'time': 1, 'zc': 1, 'xc': None, 'yc': None}
-#create_zarr(netCDF_path, ZARR_PATH)#, chunks)
+chunks = {'time': 10, 'zc': 5, 'xc': 5, 'yc': 5}
+create_zarr(netCDF_path, ZARR_PATH, chunks)
 
 absstore_zarr = zarr.storage.ABSStore(CONTAINER_NAME, BLOB_NAME, ACCOUNT_NAME, ACCOUNT_KEY)
-
-with xr.open_zarr(absstore_zarr, 'temperature') as source: 
-    print source
+#create blob from local zarr array
+absstore_zarr.create_blob(ZARR_PATH)
 
 '''
 # initialize azure blob service for our zarr array

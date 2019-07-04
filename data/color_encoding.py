@@ -129,8 +129,8 @@ def set_colormap_range():
     
     #with xr.open_dataset(source_path) as source:
     #    temps = deepcopy(source['temperature'])
-    ZARR_PATH       = 'zarr_test/data/chunked.zarr'
-    source = zarr.open(ZARR_PATH, 'r')
+    #ZARR_PATH       = 'zarr_test/data/chunked.zarr'
+    #source = zarr.open(ZARR_PATH, 'r')
     meas_min = 276
     #meas_min = float(source['temperature'].min())
     print("::::: minimum measurement found:",meas_min)
