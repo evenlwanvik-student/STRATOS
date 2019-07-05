@@ -3,3 +3,7 @@ netcdf4
 xarray
 matplotlib
 numpy
+zarr
+azure
+dask
+toolz

@@ -77,7 +77,7 @@ def create_zarr(netCDF_path=None, zarr_path='./default.zarr',
 #netCDF_test_path    = "/home/even/netCDFdata/tos_O1_2001-2002.nc"
 netCDF_path     = "/home/even/netCDFdata/samples_NSEW_2013.03.11.nc"
 CONTAINER_NAME  = 'zarr'
-BLOB_NAME       = 'Franfjorden32m/samples_NSEW_2013.03.11-chunked_time.zarr'
+BLOB_NAME       = 'Franfjorden32m/samples_NSEW_2013.03.11_chunk-test-1.zarr'
 ACCOUNT_NAME    = 'stratos'
 ACCOUNT_KEY     = 'A7nrOYKyq6y2GLlprXc6tmd+olu50blx4sPjdH1slTasiNl8jpVuy+V0UBWFNmwgVFSHMGP2/kmzahXcQlh+Vg=='
 ZARR_PATH       = 'zarr/Franfjorden32m/larger_chunks.zarr'
@@ -85,70 +85,18 @@ ZARR_PATH       = 'zarr/Franfjorden32m/larger_chunks.zarr'
 NETCDF_PATH     = 'netcdf/Franfjorden32m/samples_NSEW_2013.03.11-chunked_coordinates.nc'
 
 
-start = time.time()
 
 # "None" chunks along the full dimension
-chunks = {'time': 10, 'zc': 5, 'xc': 5, 'yc': 5}
-create_zarr(netCDF_path, ZARR_PATH, chunks)
+#chunks = {'time': 10, 'zc': 5, 'xc': 5, 'yc': 5}
+#create_zarr(netCDF_path, ZARR_PATH, chunks)
 
-absstore_zarr = zarr.storage.ABSStore(CONTAINER_NAME, BLOB_NAME, ACCOUNT_NAME, ACCOUNT_KEY)
+absstore_object = zarr.storage.ABSStore(CONTAINER_NAME, BLOB_NAME, ACCOUNT_NAME, ACCOUNT_KEY)
 #create blob from local zarr array
-absstore_zarr.create_blob(ZARR_PATH)
+#absstore_zarr.create_blob(ZARR_PATH)
 
-'''
-# initialize azure blob service for our zarr array
-#print "Creating ABS wrapper object"
-abs_wrapper = zarrABSStore(CONTAINER_NAME, BLOB_NAME, ACCOUNT_NAME, ACCOUNT_KEY)
-#print "Creating ABS object"
-abs_zarray = abs_wrapper.abs_zarray
-
-#print "Opening z-array as x-array"
-with xr.open_zarr(store=abs_zarray) as ds:
-    #print "referencing dataset"
-    a = deepcopy(ds['temperature'][0,0])
-    b = a[221,3]
-    c = float(b)
-    #if not test[0,0]:
-    #    print okai
-    #if not test[0,0]:
-'''       
-        
-
-#temp_wrapper = zarrABSStore(CONTAINER_NAME, BLOB_NAME+'/temperature', ACCOUNT_NAME, ACCOUNT_KEY)
-#temp_zarray = temp_wrapper.abs_zarray
-#temp_zarray.get_basic_selection()
-
-#rint abs_zarray.keys()#['temperature/0.0.0.0']
-#temp = abs_zarray['temperature/0.0.0.0']
-#print temp
-#temp.close()
-
-end = time.time()
-#print end-start
-
-
-# remove existing zarr array
-#my_zarr.rmdir()
-# create blob from local zarr array
-#my_zarr.create_blob(ZARR_PATH)
-
-
-
-
-
-
-
-
-#from dask.diagnostics import ProgressBar
-# Show the conversion from zarr to netcdf
-#with ProgressBar():
-#    with ds.open_zarr(NETCDF_PATH) as zarr:
-#        print ds
-#        print zarr
-
-
-#xr = xarray.open_zarr(x.my_zarr)
-
+chunks = {'time': None, 'zc': None,'xc': None, 'yc': None}
+with xr.open_zarr(absstore_object, chunk=chunks) as ds:
+    print(ds)
 
 
 '''
