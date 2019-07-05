@@ -6,6 +6,17 @@ import xarray as xr
 import shutil
 import time
 from copy import deepcopy
+import logging
+
+
+logging.basicConfig(
+    format='%(asctime)s %(levelname)-8s %(message)s',
+    level=logging.WARNING,
+    datefmt='%Y-%m-%d %H:%M:%S')
+
+
+#logger = logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(message)s',
+#                                datefmt='%Y-%m-%d %H:%M:%S')
 
 class zarrABSStore():
     '''
@@ -90,16 +101,41 @@ NETCDF_PATH     = 'netcdf/Franfjorden32m/samples_NSEW_2013.03.11-chunked_coordin
 #chunks = {'time': 10, 'zc': 5, 'xc': 5, 'yc': 5}
 #create_zarr(netCDF_path, ZARR_PATH, chunks)
 
+logging.warning("creating azure zarray-blob object")
 absstore_object = zarr.storage.ABSStore(CONTAINER_NAME, BLOB_NAME, ACCOUNT_NAME, ACCOUNT_KEY)
 #create blob from local zarr array
 #absstore_zarr.create_blob(ZARR_PATH)
 
-chunks = {'time': None, 'zc': None,'xc': None, 'yc': None}
-with xr.open_zarr(absstore_object, chunk=chunks) as ds:
-    print(ds)
+#chunks = {'time': None, 'zc': None, 'xc': 1, 'yc': 1}
+with xr.open_zarr(absstore_object) as source:   
+    logging.warning("re-chunking")
+    #source.chunk(chunks)                                                                                                                                                                                  
+    # Fetching larger grids took way longer, as it probably has to do it element-by-element
+    logging.warning("copying latitude data")
+    #temps = deepcopy(source['temperature'][0,0])#[::gridSize,::gridSize])
+    logging.warning("copying latitude data")
+    #lats = deepcopy(source['gridLats'])#[::gridSize,::gridSize])
+    logging.warning("copying latitude data")
+    #lons = deepcopy(source['gridLons'])#[::gridSize,::gridSize])
+
+    def loop(data, n):
+        for i in range(n):
+            x = float(data[0,i])
+
+    logging.warning("starting temp loop")
+    loop(source['temperature'][0,0], 10)
+    logging.warning("starting lat loop")
+    loop(source['gridLats'], 10)
+    logging.warning("loop ended")
+
+#chunks = {'time': 72, 'zc': 30,'xc': 294, 'yc': 291}
+#with xr.open_zarr(absstore_object) as ds:
+    #print(ds)
+    #x = ds.chunk(chunks=chunks)
+    #print(x)
 
 
-'''
+'''     
 The Python global interpreter lock (GIL) is released for both compression and 
 decompression operations, so Zarr will not block other Python threads from running.
 

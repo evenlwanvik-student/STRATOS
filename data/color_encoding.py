@@ -4,7 +4,7 @@ import numpy as np
 import xarray as xr
 from copy import deepcopy
 import zarr
-
+import logging
 '''
 For now this module only converts temperature, but the road to making it
 dynamic and able to convert any unit to color indicators shouldn't be to rough.
@@ -22,6 +22,11 @@ Possible changes:
         new algorithm for conversion?
 '''
 
+
+logging.basicConfig(
+    format='%(asctime)s %(levelname)-8s %(message)s',
+    level=logging.WARNING,
+    datefmt='%Y-%m-%d %H:%M:%S')
 
 
 
@@ -133,10 +138,10 @@ def set_colormap_range():
     #source = zarr.open(ZARR_PATH, 'r')
     meas_min = 276
     #meas_min = float(source['temperature'].min())
-    print("::::: minimum measurement found:",meas_min)
+    logging.info("::::: minimum measurement found: %f", meas_min)
     #meas_max = float(source['temperature'].max())
     meas_max = 282
-    print("::::: maximum measurement found:",meas_max)
+    logging.info("::::: maximum measurement found: %f", meas_max)
 
 
 # just set it when module is imported for now

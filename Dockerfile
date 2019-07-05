@@ -1,34 +1,26 @@
 # Docker container for web microservice and netCDF API
 
 # Use latest stable ubuntu OS as Docker image upon which to run the container\
-#FROM ubuntu:latest
+
+#FROM continuumio/miniconda3
 FROM python:3.6
 
-MAINTAINER Even Wanvik "evenlwanvik@gmail.com"
+
+MAINTAINER Maria Skårdal & Even Wanvik
 
 # Update and/or install necesarry dependencies and libraries
 RUN apt-get update -y
 RUN apt-get install -y python-pip python-dev build-essential
 COPY . /app
 WORKDIR /app
-RUN pip install -r requirements.txt --trusted-host pypi.org --trusted-host files.pythonhosted.org
+RUN pip install -r requirements.txt --trusted-host pypi.org --trusted-host files.pythonhosted.org --trusted-host pypi.python.org
 
-#This command is necessary to build docker image from windows
-#RUN chmod 644 app.py 
+#RUN conda install -y zarr
+
+EXPOSE 80
 
 ENV STATIC_URL /static
-ENV STATIC_PATH /home/even/Workspaces/STRATOS/app/static
+#ENV FLASK_APP app.py
 
-CMD ["/bin/bash"]
-#ENTRYPOINT ["app.py"]
 
-# Run in powershell:
-# Set-NetConnectionProfile -interfacealias "vEthernet (DockerNAT)" -NetworkCategory Private
-
-# Run these in terminal:
-# docker build -t stratos .
-# docker run -it -p 5000:5000 -v %cd%:/app -v C:\Users\marias\Documents\NetCDF_data:/data stratos /bin/bash
-
-# Once inside the container run:
-# set FLASK_APP=app.py
-# flask run -h 0.0.0.0
+CMD ["python", "-m", "flask", "run", "-p", "80", "-h", "0.0.0.0"]

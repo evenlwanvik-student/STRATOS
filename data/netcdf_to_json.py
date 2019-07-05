@@ -7,10 +7,14 @@ import time # for execution time testing
 import math
 import sys
 import zarr
+import logging
 
 from data.color_encoding import temp_to_rgb
 
-
+logging.basicConfig(
+    format='%(asctime)s %(levelname)-8s %(message)s',
+    level=logging.WARNING,
+    datefmt='%Y-%m-%d %H:%M:%S')
 
 '''
  1. load template geojson file as DATA
@@ -50,13 +54,13 @@ output_path = "data/outputs/surface_temp.json"
 
 # temporary hardcoded blob
 CONTAINER_NAME  = 'zarr'
-BLOB_NAME       = 'Franfjorden32m/samples_NSEW_2013.03.11_chunk-test-1.zarr'
+BLOB_NAME       = 'Franfjorden32m/samples_NSEW_2013.03.11-chunked_time.zarr'
 ACCOUNT_NAME    = 'stratos'
 ACCOUNT_KEY     = 'A7nrOYKyq6y2GLlprXc6tmd+olu50blx4sPjdH1slTasiNl8jpVuy+V0UBWFNmwgVFSHMGP2/kmzahXcQlh+Vg=='
 #ZARR_PATH       = 'zarr_test/data/chunked.zarr'
 
 # Create a Azure Blob Service z-array object
-print("::::: Fetching azure blob storage client")
+logging.info("::::: Fetching azure blob storage client")
 absstore_zarr = zarr.storage.ABSStore(CONTAINER_NAME, BLOB_NAME, ACCOUNT_NAME, ACCOUNT_KEY)
 
 
@@ -87,8 +91,12 @@ def geojson_grid_coord(lats, lons, startEdge):
             innerRange = reversed(xyRange)     # backward iteration to complete the polygon
         for x in innerRange: # iterate x
             yx = (startEdge[0]+y, startEdge[1]+x) # (y,x) defined as such in the netCDF file
+            coordtime = time.time()
             lat  = float(lats[yx])
+            logging.warning("time to extract latitude: %f", time.time()-coordtime)
+            coordtime = time.time()
             lon  = float(lons[yx])
+            logging.warning("time to extract longitude: %f", time.time()-coordtime)
             # OBS! The GIS lat/lon is different from geojson standard, so these are "flipped"
             coords.append([lon, lat])
             polyEdgeIdx += 1
@@ -135,32 +143,34 @@ def netcdf_to_json(startEdge=(0,0),
     temporary data variable, whose data is changed and dumped into output file..
     '''
     start = time.time() 
-
+    logging.info("::::: Entered function netcdf_to_json.py")
     # Get the initial template, the data variable will hold all temporary data
     data = get_initial_template() 
     # Get the feature template, this will be appended to data for each feature inserted
     feature_template = get_feature_template()
 
-    print("::::: opening azure z-array blob as x-array")
-    # Create local copies of subsets for further use, much faster to access
-    with xr.open_zarr(absstore_zarr) as source: 
-        # Fetching larger grids took way longer, as it probably has to do it element-by-element
-        print("::::: copying temperature data")
-        temps = deepcopy(source['temperature'][timeIdx,layerIdx])#[::gridSize,::gridSize])
-        print("::::: copying latitude data")
-        lats = deepcopy(source['gridLats'])#[::gridSize,::gridSize])
-        print("::::: copying longitude data")
-        lons = deepcopy(source['gridLons'])#[::gridSize,::gridSize])
 
+    logging.warning("::::: opening azure z-array blob as x-array")
+    # Create local copies of subsets for further use, much faster to access
+    with xr.open_zarr(absstore_zarr) as source:                                                                                                                                                                                     
+        # Fetching larger grids took way longer, as it probably has to do it element-by-element
+        logging.warning("::::: copying temperature data")
+        temps = deepcopy(source['temperature'][timeIdx,layerIdx])#[::gridSize,::gridSize])
+        logging.warning("::::: copying latitude data")
+        lats = deepcopy(source['gridLats'])#[::gridSize,::gridSize])
+        logging.warning("::::: copying longitude data")
+        lons = deepcopy(source['gridLons'])#[::gridSize,::gridSize])
     # featureIdx counts what feature we are working on = 0,1,2,3, ... 
     featureIdx = 0
     for y in range(nGrids):                 
         for x in range(nGrids):  
-            print("::::: grid ", featureIdx)
+            logging.warning("::::: grid %d", featureIdx)
             # get the start edge of the next polygon to be inserted into dictionary
             edge = (startEdge[0]+y, startEdge[1]+x)       
             # if temp=nan: skip grid -> else: insert lat/lon and temp into data
+            temptime = time.time()
             temp = float(temps[edge])
+            logging.warning("time to extract temperature: %f", time.time()-temptime)
             if math.isnan(temp):
                 continue
             else:
@@ -175,12 +185,12 @@ def netcdf_to_json(startEdge=(0,0),
                 #print data['features'][featureIdx]['geometry']['coordinates'][0][0]
                 featureIdx = featureIdx + 1
 
-    print("::::: showing surface temperature")
-    print("::::: -> startEdge:",startEdge,"nGrids:",nGrids,"layerIdx:",layerIdx,"timeIdx:",timeIdx)
+    logging.info("::::: showing surface temperature")
+    logging.info("::::: -> startEdge: %s, nGrids: %d, layerIdx: %d, timeIdx: %d", str(startEdge), nGrids, layerIdx, timeIdx)
     write_output(data)
 
     end = time.time()
-    print("::::: execution time:",end-start)
+    logging.warning("::::: execution time: %f", end-start)
 
 ''' 
 One example of reducing the load of taking the whole source file as xarray could 

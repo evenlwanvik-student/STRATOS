@@ -8,6 +8,8 @@ import sys
 from data.getZoom import returnZoom
 from data.netcdf_to_json import netcdf_to_json
 
+import logging
+
 app = Flask(__name__)
 
 @app.route('/')
@@ -20,6 +22,7 @@ def home():
 
 @app.route('/index')
 def index():
+    print("::::: redirected to index")
     return render_template('index.html', 
     name = 'World Map',
     lat = 20,
@@ -29,6 +32,7 @@ def index():
 
 @app.route('/location')
 def location():
+    print("::::: redirected to location")
     zoom = returnZoom()  # this function needs to depend on number of grids
     return render_template('index.html', 
         name = 'Franfjorden', #Hardcoded, get from form maybe?
@@ -40,9 +44,10 @@ def location():
 
 @app.route('/geojson')
 def geojson():
+    print("::::: redirected to geojson")
     zoom = returnZoom()
     netcdf_to_json(startEdge=(215,16), 
-                            nGrids=60, 
+                            nGrids=3, 
                             gridSize=1, 
                             layerIdx=0,
                             timeIdx=0)
@@ -60,6 +65,7 @@ def geojson():
 
 @app.route('/inputgrid', methods = ['POST', 'GET'])
 def result():
+    print("::::: redirected to inputgrid")
  # todo: grid and startEdge should be moved inside if request==post when figured out
     post = request.form
     grid = 1
@@ -91,7 +97,12 @@ def result():
         zoom = zoom,
         menu = "inputField")
   
+# set logger configuration, for debugging and warnings etc.
+logging.basicConfig(
+    format='%(asctime)s %(levelname)-8s %(message)s',
+    level=logging.WARNING,
+    datefmt='%Y-%m-%d %H:%M:%S')
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', threaded=True)
+    app.run(debug=True, host='0.0.0.0', threaded=True, port=80)
 
