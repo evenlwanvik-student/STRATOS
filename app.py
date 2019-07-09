@@ -46,7 +46,7 @@ def location():
 def geojson():
     print("::::: redirected to geojson")
     zoom = returnZoom()
-    netcdf_to_json(startEdge=(180,20), 
+    netcdf_to_json(startEdge=(0,0), 
                             nGrids=3, 
                             gridSize=1, 
                             layerIdx=0,
@@ -71,7 +71,7 @@ def result():
     grid = 1
     grid = int(post['nGrids'])
     depth = int(post['depth'])
-    startEdge = (180,20)
+    startEdge = (0,0)
     #x = post[startEdge]
     #startEdge = x
     #print(x)

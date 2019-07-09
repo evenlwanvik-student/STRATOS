@@ -101,50 +101,23 @@ NETCDF_PATH     = 'netcdf/Franfjorden32m/samples_NSEW_2013.03.11-chunked_coordin
 #chunks = {'time': 10, 'zc': 5, 'xc': 5, 'yc': 5}
 #create_zarr(netCDF_path, ZARR_PATH, chunks)
 
+
 logging.warning("creating azure zarray-blob object")
 absstore_object = zarr.storage.ABSStore(CONTAINER_NAME, BLOB_NAME, ACCOUNT_NAME, ACCOUNT_KEY)
+#absstore_object = zarr.convenience.open(absstore_object)
+logging.warning(absstore_object)
 #create blob from local zarr array
 #absstore_zarr.create_blob(ZARR_PATH)
 
-#chunks = {'time': None, 'zc': None, 'xc': 1, 'yc': 1}
-with xr.open_zarr(absstore_object) as source:   
-    logging.warning("re-chunking")
-    #source.chunk(chunks)                                                                                                                                                                                  
-    # Fetching larger grids took way longer, as it probably has to do it element-by-element
-    logging.warning("copying latitude data")
-    #temps = deepcopy(source['temperature'][0,0])#[::gridSize,::gridSize])
-    logging.warning("copying latitude data")
-    #lats = deepcopy(source['gridLats'])#[::gridSize,::gridSize])
-    logging.warning("copying latitude data")
-    #lons = deepcopy(source['gridLons'])#[::gridSize,::gridSize])
 
-    def loop(data, n):
-        for i in range(n):
-            x = float(data[0,i])
+def loop(data, n):
+    for i in range(n):
+        x = float(data[0,i])
 
-    logging.warning("starting temp loop")
-    loop(source['temperature'][0,0], 10)
-    logging.warning("starting lat loop")
-    loop(source['gridLats'], 10)
-    logging.warning("loop ended")
-
-#chunks = {'time': 72, 'zc': 30,'xc': 294, 'yc': 291}
-#with xr.open_zarr(absstore_object) as ds:
-    #print(ds)
-    #x = ds.chunk(chunks=chunks)
-    #print(x)
+#logging.warning("starting temp loop")
 
 
-'''     
-The Python global interpreter lock (GIL) is released for both compression and 
-decompression operations, so Zarr will not block other Python threads from running.
 
-To give a simple example, consider a 1-dimensional array of length 60, z, divided 
-into three chunks of 20 elements each. If three workers are running and each attempts 
-to write to a 20 element region (i.e., z[0:20], z[20:40] and z[40:60]) then each 
-worker will be writing to a separate chunk and no synchronization is required. 
-However, if two workers are running and each attempts to write to a 30 element 
-region (i.e., z[0:30] and z[30:60]) then it is possible both workers will attempt to 
-modify the middle chunk at the same time, and synchronization is required to prevent 
-data loss.
-'''
+with xr.open_zarr(absstore_object, group='time') as source:   
+    logging.warning(source)
+

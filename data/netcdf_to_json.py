@@ -44,25 +44,7 @@ these were the 2x2 grid with the largest differences in temperature (about 0.5-1
     (...): It now colors the grid depending on surface temperature# these were the 2x2 grid with the largest differences in temperature (about 0.5-1K difference)
 '''
 
-# define paths to files
-initial_template_path = "data/templates/initial_template.json"
-feature_template_path = "data/templates/feature_template.json"
-source_path = "/data/samples_NSEW_2013.03.11.nc" 
-#/data tells the container to go to the root and look for the folder "data", where the netCDF file is mounted using volume
-output_path = "data/outputs/surface_temp.json"
-
-
-# temporary hardcoded blob
-CONTAINER_NAME  = 'zarr'
-BLOB_NAME       = 'Franfjorden32m/samples_NSEW_2013.03.11_chunked-time&depth.zarr'
-ACCOUNT_NAME    = 'stratos'
-ACCOUNT_KEY     = 'A7nrOYKyq6y2GLlprXc6tmd+olu50blx4sPjdH1slTasiNl8jpVuy+V0UBWFNmwgVFSHMGP2/kmzahXcQlh+Vg=='
-#ZARR_PATH       = 'zarr_test/data/chunked.zarr'
-
-# Create a Azure Blob Service z-array object
-logging.info("::::: Fetching azure blob storage client")
-absstore_zarr = zarr.storage.ABSStore(CONTAINER_NAME, BLOB_NAME, ACCOUNT_NAME, ACCOUNT_KEY)
-
+import dataset.init_dataset as dataset
 
 def geojson_grid_coord(lats, lons, startEdge):
     '''
@@ -121,6 +103,7 @@ def get_feature_template():
 
 
 def write_output(data):
+    output_path = "data/outputs/surface_temp.json"
     # open and dump data to output geojson file, remove if exists
     if os.path.isfile(output_path):
         os.remove(output_path)
@@ -142,32 +125,37 @@ def netcdf_to_json(startEdge=(0,0),
     It appends geojson template dictionaries from a given file-path into a 
     temporary data variable, whose data is changed and dumped into output file..
     '''
-    start = time.time() 
+    full_start = time.time() 
     logging.info("::::: Entered function netcdf_to_json.py")
     # Get the initial template, the data variable will hold all temporary data
     data = get_initial_template() 
     # Get the feature template, this will be appended to data for each feature inserted
     feature_template = get_feature_template()
 
-
-    start = time.time()
-
-    print("::::: opening azure z-array blob as x-array")
+'''
+    section_start = time.time()
+    logging.warning("::::: opening azure z-array blob as x-array")
     # Create local copies of subsets for further use, much faster to access
     with xr.open_zarr(absstore_zarr) as source: 
         # Fetching larger grids took way longer, as it probably has to do it element-by-element
-        print("::::: copying temperature data")
+        logging.warning("::::: creating temperature array")
         #temps = deepcopy(source['temperature'][timeIdx,layerIdx].values)#[::gridSize,::gridSize])
         temps = source['temperature'][timeIdx,layerIdx].values
-        print("::::: copying latitude data")
+        logging.warning("::::: creating latitude array")
         #lats = deepcopy(source['gridLats'].values)#[::gridSize,::gridSize])
         lats = source['gridLats'].values
-        print("::::: copying longitude data")
+        logging.warning("::::: creating longitude array")
         #lons = deepcopy(source['gridLons'].values)#[::gridSize,::gridSize])
         lons = source['gridLons'].values
+    section_end = time.time()
+    logging.warning("::::: opening z-array and creating arrays execution time: %f", section_end-section_start)
+'''
 
-    start = time.time()
+    temps = dataset.temps[timeIdx,layerIdx]
+    lats  = dataset.lats
+    lons  = dataset.lons
 
+    section_start = time.time()
     # featureIdx counts what feature we are working on = 0,1,2,3, ... 
     featureIdx = 0
     for y in range(nGrids):                 
@@ -192,12 +180,19 @@ def netcdf_to_json(startEdge=(0,0),
                 #print data['features'][featureIdx]['geometry']['coordinates'][0][0]
                 featureIdx = featureIdx + 1
 
+    section_end = time.time()
+    logging.warning("::::: creating geojson data execution time: %f", section_end-section_start)
+
     logging.info("::::: showing surface temperature")
     logging.info("::::: -> startEdge: %s, nGrids: %d, layerIdx: %d, timeIdx: %d", str(startEdge), nGrids, layerIdx, timeIdx)
     write_output(data)
 
-    end = time.time()
-    logging.warning("::::: execution time: %f", end-start)
+    full_end = time.time()
+    logging.warning("::::: total execution time: %f", full_end-full_start)
+
+
+
+
 
 ''' 
 One example of reducing the load of taking the whole source file as xarray could 
