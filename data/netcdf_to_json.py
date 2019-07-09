@@ -54,7 +54,7 @@ output_path = "data/outputs/surface_temp.json"
 
 # temporary hardcoded blob
 CONTAINER_NAME  = 'zarr'
-BLOB_NAME       = 'Franfjorden32m/samples_NSEW_2013.03.11-chunked_time.zarr'
+BLOB_NAME       = 'Franfjorden32m/samples_NSEW_2013.03.11_chunked-time&depth.zarr'
 ACCOUNT_NAME    = 'stratos'
 ACCOUNT_KEY     = 'A7nrOYKyq6y2GLlprXc6tmd+olu50blx4sPjdH1slTasiNl8jpVuy+V0UBWFNmwgVFSHMGP2/kmzahXcQlh+Vg=='
 #ZARR_PATH       = 'zarr_test/data/chunked.zarr'
@@ -93,10 +93,10 @@ def geojson_grid_coord(lats, lons, startEdge):
             yx = (startEdge[0]+y, startEdge[1]+x) # (y,x) defined as such in the netCDF file
             coordtime = time.time()
             lat  = float(lats[yx])
-            logging.warning("time to extract latitude: %f", time.time()-coordtime)
+            #logging.warning("time to extract latitude: %f", time.time()-coordtime)
             coordtime = time.time()
             lon  = float(lons[yx])
-            logging.warning("time to extract longitude: %f", time.time()-coordtime)
+            #logging.warning("time to extract longitude: %f", time.time()-coordtime)
             # OBS! The GIS lat/lon is different from geojson standard, so these are "flipped"
             coords.append([lon, lat])
             polyEdgeIdx += 1
@@ -150,27 +150,34 @@ def netcdf_to_json(startEdge=(0,0),
     feature_template = get_feature_template()
 
 
-    logging.warning("::::: opening azure z-array blob as x-array")
+    start = time.time()
+
+    print("::::: opening azure z-array blob as x-array")
     # Create local copies of subsets for further use, much faster to access
-    with xr.open_zarr(absstore_zarr) as source:                                                                                                                                                                                     
+    with xr.open_zarr(absstore_zarr) as source: 
         # Fetching larger grids took way longer, as it probably has to do it element-by-element
-        logging.warning("::::: copying temperature data")
-        temps = deepcopy(source['temperature'][timeIdx,layerIdx])#[::gridSize,::gridSize])
-        logging.warning("::::: copying latitude data")
-        lats = deepcopy(source['gridLats'])#[::gridSize,::gridSize])
-        logging.warning("::::: copying longitude data")
-        lons = deepcopy(source['gridLons'])#[::gridSize,::gridSize])
+        print("::::: copying temperature data")
+        #temps = deepcopy(source['temperature'][timeIdx,layerIdx].values)#[::gridSize,::gridSize])
+        temps = source['temperature'][timeIdx,layerIdx].values
+        print("::::: copying latitude data")
+        #lats = deepcopy(source['gridLats'].values)#[::gridSize,::gridSize])
+        lats = source['gridLats'].values
+        print("::::: copying longitude data")
+        #lons = deepcopy(source['gridLons'].values)#[::gridSize,::gridSize])
+        lons = source['gridLons'].values
+
+    start = time.time()
+
     # featureIdx counts what feature we are working on = 0,1,2,3, ... 
     featureIdx = 0
     for y in range(nGrids):                 
         for x in range(nGrids):  
-            logging.warning("::::: grid %d", featureIdx)
             # get the start edge of the next polygon to be inserted into dictionary
             edge = (startEdge[0]+y, startEdge[1]+x)       
             # if temp=nan: skip grid -> else: insert lat/lon and temp into data
             temptime = time.time()
             temp = float(temps[edge])
-            logging.warning("time to extract temperature: %f", time.time()-temptime)
+            #logging.warning("time to extract temperature: %f", time.time()-temptime)
             if math.isnan(temp):
                 continue
             else:

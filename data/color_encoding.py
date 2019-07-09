@@ -79,7 +79,7 @@ def temp_to_rgb(T, start_hex=START_SPECTRUM, finish_hex=END_SPECTRUM, n=N):
     ''' performs a conversion of the input temperature in kelvin
         to a six-digit rgb color string '''
     if (T < meas_min) or (T > meas_max):
-        print("'T' is outside of boundary: T_min < T < T_max")
+        print("T=%f is outside of boundary: T_min < T < T_max", T)
         RGB_hex = RGB_to_hex((0,0,0))
     else:
         s = hex_to_RGB(start_hex)
@@ -136,7 +136,7 @@ def set_colormap_range():
     #    temps = deepcopy(source['temperature'])
     #ZARR_PATH       = 'zarr_test/data/chunked.zarr'
     #source = zarr.open(ZARR_PATH, 'r')
-    meas_min = 276
+    meas_min = 273
     #meas_min = float(source['temperature'].min())
     logging.info("::::: minimum measurement found: %f", meas_min)
     #meas_max = float(source['temperature'].max())

@@ -35,12 +35,12 @@
     <p id="Menus">    
         <div id="cssmenu">
 
-          <a href="http://127.0.0.1:80/index" class="button">World map</a>
+          <a href="http://127.0.0.1:5000/index" class="button">World map</a>
 
           <div class="dropdown">
             <button class="dropbtn">Select location</button>
             <div class="dropdown-content">
-            <a href= "http://127.0.0.1:80/location">Frænfjorden</a>
+            <a href= "http://127.0.0.1:5000/location">Frænfjorden</a>
             <a href="#">Narnia</a>
             <a href="#">Hogwarts</a>
             </div>
@@ -49,7 +49,7 @@
           <div class="dropdown">
             <button class="dropbtn">Select data</button>
             <div class="dropdown-content">
-            <a href= "http://127.0.0.1:80/geojson">Temperature</a>
+            <a href= "http://127.0.0.1:5000/geojson">Temperature</a>
             <a href="#">Salinity</a>
             <a href="#">Oil particles</a>
             </div>
@@ -70,12 +70,12 @@
     </p>
     -->
     <div id="cssmenu">
-      <form id="parameters" action="http://localhost:80/inputgrid" method="POST">
-        <p> Number of grids (1-60): <input type="number" name="nGrids" min="1" max="60"/></p>
+      <form id="parameters" action="http://localhost:5000/inputgrid" method="POST">
+        <p> Number of grids (1-60): <input type="number" name="nGrids" min="1" max="290"/></p>
         <!--<p> Grid start edge (0,0): <input type="text" name="startedge" maxlength="5"/></p>-->
         <p> Depth: <input type="number" name="depth" min="1" max="100"/></p>
         <p> Date: <input type="date" name="date"/></p>
-        <p> <input type="submit" action="http://localhost:80/inputgrid" method="POST" class="submitButton" value="submit"/></p>
+        <p> <input type="submit" action="http://localhost:5000/inputgrid" method="POST" class="submitButton" value="submit"/></p>
       </form>
     </div>
 
