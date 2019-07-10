@@ -33,14 +33,14 @@ START_SPECTRUM =  "#a7eed7" # Hot color
 END_SPECTRUM = "#005ad8"    # Cold color
 N = 10                      # Number of colors in between
 
+# just initiating some namespace variables.. should change this?
 meas_min = 272
 meas_max = 285
 
 # Set a new measurement range for the colormap
 def set_colormap_range(extrema_dict):
-    ''' simply finds the lowest and highest measured value in the 
-        dataset and sets the globals for future color encodings of the same
-        dataset '''
+    ''' gets called from other modules whenever a new grid/dataset is 
+    initiated, and we need a new color encoding '''
     meas_max = extrema_dict['min']
     meas_min = extrema_dict['max']
     logging.warning("updated colormap range %s", extrema_dict)

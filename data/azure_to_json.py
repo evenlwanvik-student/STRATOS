@@ -7,15 +7,16 @@ import time # for execution time testing
 import math
 import zarr
 import sys
-#from color_encoding import temp_to_rgb
-from data.color_encoding import temp_to_rgb
+import logging
+from data.color_encoding import temp_to_rgb, set_colormap_range
 
+'''
 # generate instance of current dataset and type of measurement
 from data.dataset import data_instance
-#from dataset import data_instance  
 blob_path = 'Franfjorden32m/samples_NSEW_2013.03.11_chunked-time&depth.zarr'
 measurement_type = 'temperature'
 dataset_obj = data_instance(blob_path, measurement_type)
+'''
 
 '''
  1. load template geojson file as DATA
@@ -112,10 +113,19 @@ def write_output(data):
         json.dump(data, output, indent=4)    
 
 
+def get_blob_client():
+    ''' Make this more dynamic.. '''
+    CONTAINER_NAME  = 'zarr'
+    BLOB_NAME       = 'Franfjorden32m/samples_NSEW_2013.03.11_chunked-time&depth.zarr'
+    ACCOUNT_NAME    = 'stratos'
+    ACCOUNT_KEY     = 'A7nrOYKyq6y2GLlprXc6tmd+olu50blx4sPjdH1slTasiNl8jpVuy+V0UBWFNmwgVFSHMGP2/kmzahXcQlh+Vg=='
+    absstore_object = zarr.storage.ABSStore(CONTAINER_NAME, BLOB_NAME, ACCOUNT_NAME, ACCOUNT_KEY)
+    return absstore_object
+
 def azure_to_json(startEdge=(0,0), 
                     nGrids=10, 
                     gridSize=1, 
-                    layerIdx=0,
+                    depthIdx=0,
                     timeIdx=0,
                     ):
     ''' 
@@ -130,28 +140,19 @@ def azure_to_json(startEdge=(0,0),
     data = get_initial_template() 
     # Get the feature template, this will be appended to data for each feature inserted
     feature_template = get_feature_template()
-
-    '''
-    print("::::: opening azure z-array blob as x-array")
-    # Create local copies of subsets for further use, much faster to access
-    with xr.open_zarr(absstore_zarr) as source: 
-        # Fetching larger grids took way longer, as it probably has to do it element-by-element
-        print("::::: copying temperature data")
-        #measurements = deepcopy(source['temperature'][timeIdx,layerIdx].values)#[::gridSize,::gridSize])
-        measurements = source['temperature'][timeIdx,layerIdx].values
-        print("::::: copying latitude data")
-        #lats = deepcopy(source['gridLats'].values)#[::gridSize,::gridSize])
+    
+    # creating arrays of measurement and coordinates
+    logging.warning("reading blob metadata and creating data arrays")
+    absstore_zarr = get_blob_client()
+    with xr.open_zarr(absstore_zarr, consolidated=True) as source: 
+        measurements = source['temperature'][timeIdx,depthIdx].values
         lats = source['gridLats'].values
-        print("::::: copying longitude data")
-        #lons = deepcopy(source['gridLons'].values)#[::gridSize,::gridSize])
         lons = source['gridLons'].values
-    '''
 
-    print("::::: creating data arrays")
-    measurements = dataset_obj.measurements[timeIdx,layerIdx].values
-    lats = dataset_obj.lats.values
-    lons = dataset_obj.lons.values
+    # finding min/max for color encoding for this grid, this should
+    set_colormap_range({'min': measurements.min(), 'max': measurements.max()})
 
+    logging.warning("creating geojson output")
     # featureIdx counts what feature we are working on = 0,1,2,3, ... 
     featureIdx = 0
     for y in range(nGrids):                 
@@ -174,12 +175,12 @@ def azure_to_json(startEdge=(0,0),
                 #print data['features'][featureIdx]['geometry']['coordinates'][0][0]
                 featureIdx = featureIdx + 1
 
-    print("::::: showing surface temperature")
-    print("::::: -> startEdge:",startEdge,"nGrids:",nGrids,"layerIdx:",layerIdx,"timeIdx:",timeIdx)
+    logging.warning("showing surface temperature")
+    logging.warning("startEdge: %s, nGrids: %d, depthIdx: %d, timeIdx: %d",startEdge,nGrids,depthIdx,timeIdx)
     write_output(data)
 
     end = time.time()
-    print("::::: execution time:",end-start)
+    logging.warning("execution time: %f",end-start)
 
 
 

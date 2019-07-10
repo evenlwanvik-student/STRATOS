@@ -88,7 +88,7 @@ def create_zarr(netCDF_path=None, zarr_path='./default.zarr',
 #netCDF_test_path    = "/home/even/netCDFdata/tos_O1_2001-2002.nc"
 netCDF_path     = "/home/even/netCDFdata/samples_NSEW_2013.03.11.nc"
 CONTAINER_NAME  = 'zarr'
-BLOB_NAME       = 'Franfjorden32m/samples_NSEW_2013.03.11_chunk-test-1.zarr'
+BLOB_NAME       = 'Franfjorden32m/samples_NSEW_2013.03.11_chunked-time&depth.zarr'
 ACCOUNT_NAME    = 'stratos'
 ACCOUNT_KEY     = 'A7nrOYKyq6y2GLlprXc6tmd+olu50blx4sPjdH1slTasiNl8jpVuy+V0UBWFNmwgVFSHMGP2/kmzahXcQlh+Vg=='
 ZARR_PATH       = 'zarr/Franfjorden32m/larger_chunks.zarr'
@@ -96,28 +96,25 @@ ZARR_PATH       = 'zarr/Franfjorden32m/larger_chunks.zarr'
 NETCDF_PATH     = 'netcdf/Franfjorden32m/samples_NSEW_2013.03.11-chunked_coordinates.nc'
 
 
+logging.warning("testing blob: %s", BLOB_NAME)
+n = 10
+start = time.time()
+for i in range(n):
+    absstore_object = zarr.storage.ABSStore(CONTAINER_NAME, BLOB_NAME, ACCOUNT_NAME, ACCOUNT_KEY)
+end = time.time()
+logging.warning("downloading ABS client: %f", (end-start)/n)
 
-# "None" chunks along the full dimension
-#chunks = {'time': 10, 'zc': 5, 'xc': 5, 'yc': 5}
-#create_zarr(netCDF_path, ZARR_PATH, chunks)
+n = 10
+start = time.time()
+for i in range(n):
+    x = xr.open_zarr(absstore_object)    
+    x.close()   
+end = time.time()
+logging.warning("creating xarray: %f", (end-start)/n)
 
 
-logging.warning("creating azure zarray-blob object")
-absstore_object = zarr.storage.ABSStore(CONTAINER_NAME, BLOB_NAME, ACCOUNT_NAME, ACCOUNT_KEY)
+
 #absstore_object = zarr.convenience.open(absstore_object)
-logging.warning(absstore_object)
+#logging.warning(absstore_object)
 #create blob from local zarr array
 #absstore_zarr.create_blob(ZARR_PATH)
-
-
-#def loop(data, n):
-#    for i in range(n):
-#        x = float(data[0,i])
-
-#logging.warning("starting temp loop")
-
-
-
-with xr.open_zarr(absstore_object) as source:   
-    logging.warning(source)
-

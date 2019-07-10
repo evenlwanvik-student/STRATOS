@@ -5,10 +5,14 @@ from netCDF4 import Dataset
 import numpy as np
 import json
 import sys
+import logging
 from data.getZoom import returnZoom
 from data.azure_to_json import azure_to_json
 
-import logging
+logging.basicConfig(
+    format='%(asctime)s %(levelname)-8s %(message)s',
+    level=logging.WARNING,
+    datefmt='%Y-%m-%d %H:%M:%S')
 
 app = Flask(__name__)
 
@@ -22,7 +26,7 @@ def home():
 
 @app.route('/index')
 def index():
-    print("::::: redirected to index")
+    logging.warning("redirected to index")
     return render_template('index.html', 
     name = 'World Map',
     lat = 20,
@@ -32,7 +36,7 @@ def index():
 
 @app.route('/location')
 def location():
-    print("::::: redirected to location")
+    logging.warning("redirected to location")
     zoom = returnZoom()  # this function needs to depend on number of grids
     return render_template('index.html', 
         name = 'Franfjorden', #Hardcoded, get from form maybe?
@@ -44,12 +48,12 @@ def location():
 
 @app.route('/geojson')
 def geojson():
-    print("::::: redirected to geojson")
+    logging.warning("redirected to geojson")
     zoom = returnZoom()
     azure_to_json(startEdge=(0,0), 
                             nGrids=3, 
                             gridSize=1, 
-                            layerIdx=0,
+                            depthIdx=0,
                             timeIdx=0)
 
     with open ('data/outputs/surface_temp.json') as inf:
@@ -65,17 +69,13 @@ def geojson():
 
 @app.route('/inputgrid', methods = ['POST', 'GET'])
 def result():
-    print("::::: redirected to inputgrid")
+    logging.warning("redirected to inputgrid")
  # todo: grid and startEdge should be moved inside if request==post when figured out
     post = request.form
     grid = 1
     grid = int(post['nGrids'])
     depth = int(post['depth'])
     startEdge = (0,0)
-    #x = post[startEdge]
-    #startEdge = x
-    #print(x)
-    #print(tuple (x))
 
     ''' DOES NOT WORK YET
         # if received request
@@ -85,7 +85,7 @@ def result():
     ''' 
     # set zoom, todo: make this dynamic depending on start and end grid?
     zoom = returnZoom()
-    azure_to_json(startEdge=startEdge, nGrids=grid, layerIdx=depth)
+    azure_to_json(startEdge=startEdge, nGrids=grid, depthIdx=depth)
 
     with open ('data/outputs/surface_temp.json') as inf:
         jsondata = inf.read() #Not sure if its necessary to read, maybe possible to just dump
@@ -97,12 +97,8 @@ def result():
         zoom = zoom,
         menu = "inputField")
   
-# set logger configuration, for debugging and warnings etc.
-logging.basicConfig(
-    format='%(asctime)s %(levelname)-8s %(message)s',
-    level=logging.WARNING,
-    datefmt='%Y-%m-%d %H:%M:%S')
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', threaded=True)
+
 
