@@ -1,9 +1,6 @@
 import matplotlib.pyplot as plt
 import matplotlib.colors as mplcolors
 import numpy as np
-import xarray as xr
-from copy import deepcopy
-import zarr
 import logging
 '''
 For now this module only converts temperature, but the road to making it
@@ -29,14 +26,24 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S')
 
 
+#-------------- initializations --------------
 
 # Declaring global varibles for color spectrum
 START_SPECTRUM =  "#a7eed7" # Hot color
 END_SPECTRUM = "#005ad8"    # Cold color
 N = 10                      # Number of colors in between
-# New global min/max values is found whenever new dataset is requested
-MEAS_MAX = 281              
-MEAS_MIN = 275
+
+meas_min = 272
+meas_max = 285
+
+# Set a new measurement range for the colormap
+def set_colormap_range(extrema_dict):
+    ''' simply finds the lowest and highest measured value in the 
+        dataset and sets the globals for future color encodings of the same
+        dataset '''
+    meas_max = extrema_dict['min']
+    meas_min = extrema_dict['max']
+    logging.warning("updated colormap range %s", extrema_dict)
 
 
 #-------------- value <-> RGB <-> hexadecimal --------------
@@ -117,32 +124,3 @@ def plot_colormap(start_hex=START_SPECTRUM, finish_hex=END_SPECTRUM, n=N):
     colormap(rgb_list)
 
 
-#-------------- initialization stuff --------------
-
-# hardcoded for now
-# The netCDF file is available because volume is used to mount the fileto the container
-# used the folllowing command in terminal: docker run -it -p 5000:5000 -v %cd%:/app -v C:\Users\marias\Documents\NetCDF_data:/data stratos /bin/bash
-source_path = "/data/samples_NSEW_2013.03.11.nc"
-
-# global variable for min/max measurement value, probably going to change this
-def set_colormap_range():
-    ''' simply finds the lowest and highest measured value in the 
-        dataset and sets the globals for future color encodings of the same
-        dataset '''
-    global meas_max
-    global meas_min
-    
-    #with xr.open_dataset(source_path) as source:
-    #    temps = deepcopy(source['temperature'])
-    #ZARR_PATH       = 'zarr_test/data/chunked.zarr'
-    #source = zarr.open(ZARR_PATH, 'r')
-    meas_min = 273
-    #meas_min = float(source['temperature'].min())
-    logging.info("::::: minimum measurement found: %f", meas_min)
-    #meas_max = float(source['temperature'].max())
-    meas_max = 282
-    logging.info("::::: maximum measurement found: %f", meas_max)
-
-
-# just set it when module is imported for now
-set_colormap_range()

@@ -6,7 +6,7 @@ import numpy as np
 import json
 import sys
 from data.getZoom import returnZoom
-from data.netcdf_to_json import netcdf_to_json
+from data.azure_to_json import azure_to_json
 
 import logging
 
@@ -46,7 +46,7 @@ def location():
 def geojson():
     print("::::: redirected to geojson")
     zoom = returnZoom()
-    netcdf_to_json(startEdge=(0,0), 
+    azure_to_json(startEdge=(0,0), 
                             nGrids=3, 
                             gridSize=1, 
                             layerIdx=0,
@@ -85,7 +85,7 @@ def result():
     ''' 
     # set zoom, todo: make this dynamic depending on start and end grid?
     zoom = returnZoom()
-    netcdf_to_json(startEdge=startEdge, nGrids=grid, layerIdx=depth)
+    azure_to_json(startEdge=startEdge, nGrids=grid, layerIdx=depth)
 
     with open ('data/outputs/surface_temp.json') as inf:
         jsondata = inf.read() #Not sure if its necessary to read, maybe possible to just dump

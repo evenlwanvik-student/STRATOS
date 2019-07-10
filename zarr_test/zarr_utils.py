@@ -110,14 +110,14 @@ logging.warning(absstore_object)
 #absstore_zarr.create_blob(ZARR_PATH)
 
 
-def loop(data, n):
-    for i in range(n):
-        x = float(data[0,i])
+#def loop(data, n):
+#    for i in range(n):
+#        x = float(data[0,i])
 
 #logging.warning("starting temp loop")
 
 
 
-with xr.open_zarr(absstore_object, group='time') as source:   
+with xr.open_zarr(absstore_object) as source:   
     logging.warning(source)
 
