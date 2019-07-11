@@ -30,6 +30,27 @@ logging.warning(end-start)
 
 
 start = time.time()
+decom_temps = blosc.decompress(absstore_object['temperature/0.0.0.0'])
+decom_lats = blosc.decompress(absstore_object['gridLons/0.0'])
+decom_lons = blosc.decompress(absstore_object['gridLats/0.0'])
+end = time.time()
+logging.warning(end-start)
+
+
+start = time.time()
+temps = np.frombuffer(decom_temps, dtype='<f4')
+lons = np.frombuffer(decom_lats, dtype='<f4')
+lats = np.frombuffer(decom_lons, dtype='<f4')
+end = time.time()
+logging.warning(end-start)
+
+
+logging.warning(lons)
+logging.warning(len(temps))
+logging.warning(len(lons))
+logging.warning(len(lats))
+
+start = time.time()
 temps = np.frombuffer(decom_temps, dtype='<f4')
 lons = np.frombuffer(decom_lats, dtype='<f4')
 lats = np.frombuffer(decom_lons, dtype='<f4')

@@ -1,0 +1,7 @@
+*.pyc
+data/*.pyc
+zarr_test/*.pyc
+
+__pycache__
+data/__pycache__
+zarr_test/__pycache__
