@@ -91,11 +91,17 @@ CONTAINER_NAME  = 'zarr'
 BLOB_NAME       = 'Franfjorden32m/samples_NSEW_2013.03.11_chunked-time&depth.zarr'
 ACCOUNT_NAME    = 'stratos'
 ACCOUNT_KEY     = 'A7nrOYKyq6y2GLlprXc6tmd+olu50blx4sPjdH1slTasiNl8jpVuy+V0UBWFNmwgVFSHMGP2/kmzahXcQlh+Vg=='
-ZARR_PATH       = 'zarr/Franfjorden32m/larger_chunks.zarr'
-#LOCAL_ZARR2     = 'zarr/2Franfjorden32m/test.zarr'
 NETCDF_PATH     = 'netcdf/Franfjorden32m/samples_NSEW_2013.03.11-chunked_coordinates.nc'
 
 
+
+
+absstore_object = zarr.storage.ABSStore(CONTAINER_NAME, BLOB_NAME, ACCOUNT_NAME, ACCOUNT_KEY)
+
+#create blob from local zarr array
+#absstore_zarr.create_blob(ZARR_PATH)
+
+'''
 logging.warning("testing blob: %s", BLOB_NAME)
 n = 10
 start = time.time()
@@ -111,10 +117,4 @@ for i in range(n):
     x.close()   
 end = time.time()
 logging.warning("creating xarray: %f", (end-start)/n)
-
-
-
-#absstore_object = zarr.convenience.open(absstore_object)
-#logging.warning(absstore_object)
-#create blob from local zarr array
-#absstore_zarr.create_blob(ZARR_PATH)
+'''

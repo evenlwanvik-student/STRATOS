@@ -1,2 +1,2 @@
 def returnZoom():
-    return 14
+    return 12

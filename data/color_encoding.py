@@ -1,46 +1,31 @@
 import matplotlib.pyplot as plt
 import matplotlib.colors as mplcolors
 import numpy as np
+import xarray as xr
+from copy import deepcopy
 import logging
-'''
-For now this module only converts temperature, but the road to making it
-dynamic and able to convert any unit to color indicators shouldn't be to rough.
 
-    We have:
-    * some value/rgb/hexa conversion functions
-    * Ways for plotting a given range of RGB values
 
-Original start and finish hexa values: start_hex="#012d6b", finish_hex="#ff5519".
-The spectrum is displayed in "color_range.png".
-
-Possible changes:
-    - Hardcode a decided range, both for temperature and color
-    - Find a better (more desired) color range, maybe find a 
-        new algorithm for conversion?
-'''
-
+#-------------- initializations --------------
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
     level=logging.WARNING,
     datefmt='%Y-%m-%d %H:%M:%S')
 
-
-#-------------- initializations --------------
-
 # Declaring global varibles for color spectrum
 START_SPECTRUM =  "#a7eed7" # Hot color
 END_SPECTRUM = "#005ad8"    # Cold color
 N = 10                      # Number of colors in between
 
-# just initiating some namespace variables.. should change this?
 meas_min = 272
 meas_max = 285
 
 # Set a new measurement range for the colormap
 def set_colormap_range(extrema_dict):
-    ''' gets called from other modules whenever a new grid/dataset is 
-    initiated, and we need a new color encoding '''
+    ''' simply finds the lowest and highest measured value in the 
+        dataset and sets the globals for future color encodings of the same
+        dataset '''
     meas_max = extrema_dict['min']
     meas_min = extrema_dict['max']
     logging.warning("updated colormap range %s", extrema_dict)
@@ -86,8 +71,7 @@ def temp_to_rgb(T, start_hex=START_SPECTRUM, finish_hex=END_SPECTRUM, n=N):
     ''' performs a conversion of the input temperature in kelvin
         to a six-digit rgb color string '''
     if (T < meas_min) or (T > meas_max):
-        print("T=%f is outside of boundary: T_min < T < T_max", T)
-        RGB_hex = RGB_to_hex((0,0,0))
+        raise ValueError("'T' is outside of boundary: T_min < T < T_max")
     else:
         s = hex_to_RGB(start_hex)
         f = hex_to_RGB(finish_hex)
@@ -122,5 +106,4 @@ def plot_colormap(start_hex=START_SPECTRUM, finish_hex=END_SPECTRUM, n=N):
     ''' simple wrapper for getting spectrum and plotting it '''
     rgb_list = rgb_spectrum(start_hex, finish_hex, n)
     colormap(rgb_list)
-
 

@@ -21,6 +21,7 @@ class data_instance():
         What type of measurement to display (e.g. 'temperature', 'salinity', etc)
 
     '''
+    
     def __init__(self, blob_path, measurement_type):
         logging.warning("generating dataset for blob: %s and measurement type %s", blob_path, measurement_type)
         self.container_name   = "zarr"
@@ -59,15 +60,6 @@ class data_instance():
         set_colormap_range(self.measurement_range)
         '''
 
-    def set_measurement_range(self, timeIdx, depthIdx):
-        current_meas = self.measurements[timeIdx,depthIdx].values
-        logging.warning(current_meas)
-        meas_min = float(current_meas.min())
-        meas_max = float(current_meas.max())
-        meas_range = {'min': meas_min, 'max': meas_max}
-        # set the range in in color_encoding.py
-        logging.warning("dataset measurement range %s", meas_range)
-        set_colormap_range(meas_range)
-
     def __del__(self):
         logging.warning("dataset class destructor")
+        # not sure if this is necessary

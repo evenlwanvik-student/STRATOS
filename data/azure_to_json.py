@@ -1,6 +1,6 @@
 import xarray as xr
 import json
-import numpy
+import numpy as np
 import os
 from copy import deepcopy
 import time # for execution time testing
@@ -10,18 +10,15 @@ import sys
 import logging
 from data.color_encoding import temp_to_rgb, set_colormap_range
 
-'''
-# generate instance of current dataset and type of measurement
-from data.dataset import data_instance
-blob_path = 'Franfjorden32m/samples_NSEW_2013.03.11_chunked-time&depth.zarr'
-measurement_type = 'temperature'
-dataset_obj = data_instance(blob_path, measurement_type)
-'''
+logging.basicConfig(
+    format='%(asctime)s %(levelname)-8s %(message)s',
+    level=logging.WARNING,
+    datefmt='%Y-%m-%d %H:%M:%S')
 
 '''
  1. load template geojson file as DATA
  2. load output geojson file as output
- 3. load netCDF file as source
+ 3. using data loaded by the dataset module
  4. run function for inserting source data into the temporary (templated) data file
  5. dump the data file into outputfile (the geojson file to be used in leaflet)
  create subgrid with indexes:
@@ -30,26 +27,13 @@ dataset_obj = data_instance(blob_path, measurement_type)
      *(221,19) -> (221,2)
          ^          |
       (221,20) <- (222,20)                         
-                          
-these were the 2x2 grid with the largest differences in temperature (about 0.5-1K difference)
-
-    * We should probably implement some sort of dynamic rendering which makes
-        the grids larger depending on how far out the user zoom.
-        - Depending on if temperature is called, only create xarray subsets of temperature and coordinates
-        - Depending on zoom, only extract every other or 4.th squares and extrapolate from the edge throughout
-            the other squares
-        - We probably have to change geojson to take geological coordinate and the target unit as seperate arguments
-    * Make it compatible with other measurements
-        - 
-
-    (24/06/2019): In the first round this can extract a single 2x2 grids.
-    (...): It now colors the grid depending on surface temperature# these were the 2x2 grid with the largest differences in temperature (about 0.5-1K difference)
 '''
 
 # define paths to files
 initial_template_path = "data/templates/initial_template.json"
 feature_template_path = "data/templates/feature_template.json"
 output_path = "data/outputs/surface_temp.json"
+
 
 def geojson_grid_coord(lats, lons, startEdge):
     '''
@@ -103,6 +87,8 @@ def get_feature_template():
         return json.load(feature_json_template)
 
 
+''' netcdf_to_json should just return the json object instead of writing it to file
+
 def write_output(data):
     # open and dump data to output geojson file, remove if exists
     if os.path.isfile(output_path):
@@ -111,9 +97,9 @@ def write_output(data):
     with open(output_path, "w+") as output: 
         # dump new data into output json file 
         json.dump(data, output, indent=4)    
+'''
 
-
-def get_blob_client():
+def create_blob_client():
     ''' Make this more dynamic.. '''
     CONTAINER_NAME  = 'zarr'
     BLOB_NAME       = 'Franfjorden32m/samples_NSEW_2013.03.11_chunked-time&depth.zarr'
@@ -121,7 +107,6 @@ def get_blob_client():
     ACCOUNT_KEY     = 'A7nrOYKyq6y2GLlprXc6tmd+olu50blx4sPjdH1slTasiNl8jpVuy+V0UBWFNmwgVFSHMGP2/kmzahXcQlh+Vg=='
     absstore_object = zarr.storage.ABSStore(CONTAINER_NAME, BLOB_NAME, ACCOUNT_NAME, ACCOUNT_KEY)
     return absstore_object
-
 
 def azure_to_json(startEdge=(0,0), 
                     nGrids=10, 
@@ -137,23 +122,36 @@ def azure_to_json(startEdge=(0,0),
     '''
     start = time.time() 
 
-    # Get the initial template, the data variable will hold all temporary data
-    data = get_initial_template() 
-    # Get the feature template, this will be appended to data for each feature inserted
+    # Get the initial template
+    jsonData = get_initial_template() 
+    # Get the feature template, this will be appended to jsonData for each feature inserted
     feature_template = get_feature_template()
-    
-    # creating arrays of measurement and coordinates
-    logging.warning("reading blob metadata and creating data arrays")
-    absstore_zarr = get_blob_client()
-    with xr.open_zarr(absstore_zarr, consolidated=True) as source: 
-        measurements = source['temperature'][timeIdx,depthIdx].values
-        lats = source['gridLats'].values
-        lons = source['gridLons'].values
+
+    # azure zarr-blob object
+    absstore_obj = create_blob_client()
+
+    section_start = time.time()
+    decom_meas = zarr.blosc.decompress(absstore_obj['temperature/{}.{}.0.0'.format(timeIdx,depthIdx)])
+    decom_lats = zarr.blosc.decompress(absstore_obj['gridLons/0.0'])
+    decom_lons = zarr.blosc.decompress(absstore_obj['gridLats/0.0'])
+    end = time.time()
+    logging.warning("decompressing azure blob chunks execution time: %f",end-section_start)
+
+    # get the shape of the array using metadata
+    metadata = absstore_obj['gridLats/.zarray']
+    shape = tuple(json.loads(metadata)['chunks'])
+
+    # create numpy arrays from the decompressed buffers and give it our grid shape
+    section_start = time.time()
+    lons = np.frombuffer(decom_lats, dtype='<f4').reshape(shape)
+    lats = np.frombuffer(decom_lons, dtype='<f4').reshape(shape)
+    measurements = np.frombuffer(decom_meas, dtype='<f4').reshape(shape)
+    end = time.time()
+    logging.warning("creating numpy arrays of decompresed arrays execution time: %f",end-section_start)
 
     # finding min/max for color encoding for this grid, this should
     set_colormap_range({'min': measurements.min(), 'max': measurements.max()})
 
-    logging.warning("creating geojson output")
     # featureIdx counts what feature we are working on = 0,1,2,3, ... 
     featureIdx = 0
     for y in range(nGrids):                 
@@ -161,29 +159,28 @@ def azure_to_json(startEdge=(0,0),
             # get the start edge of the next polygon to be inserted into dictionary
             edge = (startEdge[0]+y, startEdge[1]+x)       
             # if temp=nan: skip grid -> else: insert lat/lon and temp into data
-            temp = float(measurements[edge])
-            if math.isnan(temp):
+            measurement = float(measurements[edge])
+            if math.isnan(measurement) or measurement < -30000:
                 continue
             else:
                 # add a copy of the feature dictionary template to features
-                data['features'].append(deepcopy(feature_template))    
+                jsonData['features'].append(deepcopy(feature_template))    
                 # create a reference to the current feature we are working on
-                feature = data['features'][featureIdx]
+                feature = jsonData['features'][featureIdx]
                 # insert hex into fill
-                feature['properties']['fill'] = geojson_grid_temp(temp) 
-                # copying netcdf data into the goven feature position
+                feature['properties']['fill'] = geojson_grid_temp(measurement) 
+                # getting coordinates of polygon and insert into geojson feature
                 feature['geometry']['coordinates'][0] = geojson_grid_coord(lats, lons, edge)                 
-                #print data['features'][featureIdx]['geometry']['coordinates'][0][0]
+                
                 featureIdx = featureIdx + 1
 
     logging.warning("showing surface temperature")
     logging.warning("startEdge: %s, nGrids: %d, depthIdx: %d, timeIdx: %d",startEdge,nGrids,depthIdx,timeIdx)
-    write_output(data)
+    #write_output(jsonData)
 
     end = time.time()
     logging.warning("execution time: %f",end-start)
-
-
+    return jsonData
 
 ''' 
 One example of reducing the load of taking the whole source file as xarray could 
