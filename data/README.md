@@ -36,7 +36,7 @@ There are a lot of project working towards the best solution for storage of big 
 
 For this project, one of the main assignments was to find a viable way to display large datasets in a cloud environment. This also ment researching new methods for storage and access. Although zarr i still a very young project, it has been covered as the best of many newcomers in the field and enjoys a broad popularity within the [Unidata](https://www.unidata.ucar.edu/blogs/news/entry/netcdf-and-native-cloud-storage) community. In  short zarr is a python package providing an implementation of chunked, compressed, N-dimensional arrays. A zarr array is stored in any system that provides a key/value interface, for instance a directory in a normal file system, where keys are file names, values are file contents, and files can be read, written or deleted via the operating system.
 
-```
+```bash
 root.zarr
     |-- temperature
     |   |-- .zarray
@@ -50,7 +50,7 @@ root.zarr
 ```
 ### 3.2 Simple tutorial when working with netcdf and zarr files
 The xarray project has a zarr backend that allows for converting to and from xarray to zarr file structure. Since this feature is still young, xarray can only open zarr datasets that have been written by xarray.
-##### 3.2.1 opening netCDF dataset in Xarray
+##### 3.2.1 opening netCDF/zarr dataset in Xarray
 Simply open the netCDF dataset:
 ```python
 import xarray as xr
@@ -60,3 +60,36 @@ One can also open multiple datasets if they comprise a single dataset split into
 ```python
 import xarray as xr
 ds = xr.open_dataset('/path/to/mydataset/*.nc')
+```
+##### 3.2.2 export to Zarr format
+The next step is to export your xarray.Dataset to a Zarr Directory Store:
+```python
+ds.to_zarr('/path/to/output/mydataset')
+```
+Xarray and Zarr have many different options for encoding and compression of the datasets. This can be passed to to_zarr via the encoding keyword argument, an example of chunking will be shown in a following step about cloud storage. 
+##### 3.2.3 create a azure blob client for zarr files
+First we need to create an interface between you, the zarr file format, and the blob storage account. [Zarr's storage module](https://zarr.readthedocs.io/en/stable/api/storage.html#module-zarr.storage) has classes for different distributed storage systems (Azure, Amazon's S3, Google Cloud Storage, ...). It's implementations of the [MutableMapping](https://docs.python.org/3/library/collections.abc.html) interface makes it easy to access the different sets of data like groups, chunks, metadata, etc. Firstly, we create our Azure Blob Client (ABS):
+```python
+import zarr
+abs_client = zarr.storage.ABSStore(container, prefix, account_name, account_key)
+```
+where ```container``` is The name of the ABS container to use, ```prefix``` the location of the "directory" to use as root of the storage hierarchy, ```account_name``` the storage account name and ```account_key``` the access key to the storage account.
+In order to use the Azure Storage clients in python, you'll need to install the [Microsoft Azure Storage SDK for Python](https://github.com/Azure/azure-storage-python). 
+##### 3.2.4 Creating/updating blob from local netcdf
+For simply creating/uploading a new Zarr blob, as long as no blob exists with the same prefix, you only need to use xarrays ```to_zarr``` function with the azure blob client as argument:
+```python
+ds.to_zarr(abs_client)
+```
+If you want to update an existing blob, you'll have to remove the existing file structure before before uploading:
+```python
+abs_client.rmdir()
+ds.to_zarr(abs_client)
+```
+It is possible to for instance append new groups to an existing blob, but this won't be covered in this tutorial as it's not relevant for this project.
+##### 3.2.5 Creating zarr blob directly from netcdf blob
+```python
+    block_blob_service = BlockBlobService(account_name, account_key)
+    #with open(output_path, 'w+') as f:
+    block_blob_service.get_blob_to_path(container_name, blob_name, output_path)
+with xr.open_dataset(netcdf_path, chunks=chunks) as ds:
+```

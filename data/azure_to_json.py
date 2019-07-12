@@ -1,12 +1,9 @@
-import xarray as xr
 import json
 import numpy as np
 import os
 from copy import deepcopy
-import time # for execution time testing
-import math
+import time
 import zarr
-import blosc
 import sys
 import logging
 import warnings
@@ -36,8 +33,6 @@ logging.basicConfig(
 # define paths to files
 initial_template_path = "data/templates/initial_template.json"
 feature_template_path = "data/templates/feature_template.json"
-output_path = "data/outputs/surface_temp.json"
-
 
 def geojson_grid_coord(lats, lons, startEdge):
     '''
@@ -89,19 +84,6 @@ def get_initial_template():
 def get_feature_template():
     with open(feature_template_path) as feature_json_template:
         return json.load(feature_json_template)
-
-
-''' netcdf_to_json should just return the json object instead of writing it to file
-
-def write_output(data):
-    # open and dump data to output geojson file, remove if exists
-    if os.path.isfile(output_path):
-        os.remove(output_path)
-    # open the final product file as output 
-    with open(output_path, "w+") as output: 
-        # dump new data into output json file 
-        json.dump(data, output, indent=4)    
-'''
 
 def create_blob_client(dataset):
     ''' TODO: This should be made to properly react to user input, for now we only
@@ -205,7 +187,7 @@ def azure_to_json(startEdge=(0,0),
             edge = (startEdge[0]+y, startEdge[1]+x)       
             # if temp=nan: skip grid -> else: insert lat/lon and temp into data
             measurement = float(measurements[edge])
-            if math.isnan(measurement) or measurement == -32768:
+            if np.isnan(measurement) or measurement == -32768:
                 continue
             else:
                 # add a copy of the feature dictionary template to features
@@ -227,45 +209,13 @@ def azure_to_json(startEdge=(0,0),
     logging.warning("execution time: %f",end-start)
     return jsonData
 
-''' 
-One example of reducing the load of taking the whole source file as xarray could 
-be to nest the opens as such:
-with xr.open_dataset(source_pat, drop_variables[...]) as geo_coord:
-    with xr.open_dataset(source_path, drop_variables[...]) as tmp:
-
-or just
-
-coord = xr.open_dataset(source_path, drop_variables[...])
-tmp = xr.open_dataset(source_path, drop_variables[...])
-
-25/06/2019:
-    Testing execution time with getting 100 grids:
-        - normal operation (x=1) takes about 1e-6
-        - appending the 'features' template to the data file takes about 2e-4
-        - copying lat/lon data takes about 4e-4
-        - fetching the hex RGB from temperature takes about 5e-3
-        - the loop for inserting coordinates takes about 1.5e-2 :O
-
-26/06/2019:
-    Split data into subset copies for processing, still getting 100 grids:
-        - the loop for inserting coordinates now takes about 7e-3
-        - full operation takes 0.68815 seconds as before it took
-            2.14507 seconds. big improvements.
-    takes a total of 206 seconds to get 250^2=62500 grids
-
-Tried to increase number of CPUs to 2 and memory to about 1k. The execution time of 
-the insertion loop still took 1.5e-2 seconds. Maybe implement multithreading, spreading
-the resource between different grid squares.
-
-'''
-
 
 # TODO: Keep this for quick-testing for now..
-#dataset={'dataset':'nordfjord32m', 'type':'temperature'}
+dataset={'dataset':'nordfjord32m', 'type':'temperature'}
 #dataset={'dataset':'nordfjord32m', 'type':'salinity'}
 #dataset={'dataset':'norsok', 'type':'temperature'}
 
-#azure_to_json(nGrids=100, 
-#                    depthIdx=0,
-#                    timeIdx=0,
-#                    dataset=dataset)
+azure_to_json(nGrids=100, 
+                    depthIdx=0,
+                    timeIdx=0,
+                    dataset=dataset)
