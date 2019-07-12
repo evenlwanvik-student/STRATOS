@@ -34,8 +34,8 @@ After a lot of research on the use of z-array ([zarr](https://zarr.readthedocs.i
 ## 3 zarr
 There are a lot of project working towards the best solution for storage of big data (over 50Gb) in the cloud. The "old" convention is to store data locally, but as cloud storage technology evolves there is a shift to employ cloud storage and access the data using the internet. It is possible to upload the netCDF files as either a [block blob](https://docs.microsoft.com/en-us/rest/api/storageservices/understanding-block-blobs--append-blobs--and-page-blobs) or , however this was tested and did not give satisfactory results.
 
-### 3.1 Background
-For this project, one of the main assignments was to find a viable way to display large datasets in a cloud environment. This also ment researching new methods for storage and access. Although zarr i still a very young project, it has been covered as the best of many newcomers in the field and enjoys a broad popularity within the [Unidata](https://www.unidata.ucar.edu/blogs/news/entry/netcdf-and-native-cloud-storage) community. In  short zarr is a python package providing an implementation of chunked, compressed, N-dimensional arrays. A zarr array is stored in any system that provides a key/value interface, for instance a directory in a normal file system, where keys are file names, values are file contents, and files can be read, written or deleted via the operating system. In a zarr dataset, the arrays are divided into chunks and compressed. These individual chunks cna be stored as files on a filesystem or as objects in a cloud storage bucket. The metadata are stored in lightweight .json files (.zarray in hierarchy shown below). 
+For this project, one of the main assignments was to find a viable way to display large datasets in a cloud environment. This also ment researching new methods for storage and access. Although zarr i still a very young project, it has been covered as the best of many newcomers in the field and enjoys a broad popularity within the [Unidata](https://www.unidata.ucar.edu/blogs/news/entry/netcdf-and-native-cloud-storage) community. In  short zarr is a python package providing an implementation of chunked, compressed, N-dimensional arrays. A zarr array is stored in any system that provides a key/value interface, for instance a directory in a normal file system, where keys are file names, values are file contents, and files can be read, written or deleted via the operating system.
+
 ```bash
 root.zarr
     |-- temperature
@@ -93,5 +93,3 @@ It is possible to for instance append new groups to an existing blob, but this w
     block_blob_service.get_blob_to_path(container_name, blob_name, output_path)
 with xr.open_dataset(netcdf_path, chunks=chunks) as ds:
 ```
-
-
