@@ -7,3 +7,4 @@ zarr
 azure
 dask
 toolz
+blosc

@@ -6,9 +6,13 @@ from copy import deepcopy
 import time # for execution time testing
 import math
 import zarr
+import blosc
 import sys
 import logging
-from data.color_encoding import temp_to_rgb, set_colormap_range
+import warnings
+# TODO: CHANGE BACK TO data.color_encoding
+from color_encoding import temp_to_rgb, set_colormap_range
+
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
@@ -99,26 +103,86 @@ def write_output(data):
         json.dump(data, output, indent=4)    
 '''
 
-def create_blob_client():
-    ''' Make this more dynamic.. '''
+def create_blob_client(dataset):
+    ''' TODO: This should be made to properly react to user input, for now we only
+    switch between one measurement per norsok and franfjorden. 
+    It should also be able to react to type of measurement, e.g. temperature, wind..'''
+
+    if ('norsok' in dataset['dataset']):
+        BLOB_NAME = 'norsok/samples_NSEW.nc_201301_nc4.zarr'
+    else:
+        BLOB_NAME = 'Franfjorden32m/time&depth-chunked-consolidated-metadata.zarr'
     CONTAINER_NAME  = 'zarr'
-    BLOB_NAME       = 'Franfjorden32m/samples_NSEW_2013.03.11_chunked-time&depth.zarr'
     ACCOUNT_NAME    = 'stratos'
     ACCOUNT_KEY     = 'A7nrOYKyq6y2GLlprXc6tmd+olu50blx4sPjdH1slTasiNl8jpVuy+V0UBWFNmwgVFSHMGP2/kmzahXcQlh+Vg=='
     absstore_object = zarr.storage.ABSStore(CONTAINER_NAME, BLOB_NAME, ACCOUNT_NAME, ACCOUNT_KEY)
     return absstore_object
+
+
+def set_colormap_encoding_range(measurements, fill_value):
+    # finding min/max for color encoding for this grid, this should
+    if fill_value == np.NaN:
+        set_colormap_range({'min': measurements.nanmin(), 'max': measurements.nanmax()})
+    elif fill_value == -32768:
+        # omit fillvalues for finding minimum..
+        x = measurements[measurements > -32768]
+        set_colormap_range({'min': x.min(), 'max': x.max()})
+    else:
+        warnings.warn("unknown encoding of fill_value, insert in this if-else-section")
+
+
+def get_decompressed_arrays(dataset, depthIdx=0, timeIdx=0):
+    # azure zarr-blob object
+    absstore_obj = create_blob_client(dataset)
+
+    datatype = dataset['type']
+
+    section_start = time.time()
+    decom_meas = zarr.blosc.decompress(absstore_obj['{}/{}.{}.0.0'.format(datatype,timeIdx,depthIdx)])
+    decom_lats = zarr.blosc.decompress(absstore_obj['gridLons/0.0'])
+    decom_lons = zarr.blosc.decompress(absstore_obj['gridLats/0.0'])
+    end = time.time()
+    logging.warning("decompressing azure blob chunks execution time: %f",end-section_start)
+
+    #The metadata for coodinates might be different from the measurement
+    coord_metadata = json.loads(absstore_obj['gridLats/.zarray'])
+    meas_metadata = json.loads(absstore_obj['{}/.zarray'.format(datatype)])
+    coord_shape = tuple(coord_metadata['chunks'])
+    meas_shape = coord_shape
+    coord_datatype = coord_metadata['dtype']
+    meas_datatype = meas_metadata['dtype']
+    logging.warning(meas_metadata)
+
+    # create numpy arrays from the decompressed buffers and give it our grid shape
+    section_start = time.time()
+    lons = np.frombuffer(decom_lats, dtype=coord_datatype).reshape(coord_shape)
+    lats = np.frombuffer(decom_lons, dtype=coord_datatype).reshape(coord_shape)
+    measurements = np.array(np.frombuffer(decom_meas, dtype=meas_datatype).reshape(meas_shape))
+    end = time.time()
+    logging.warning("creating numpy arrays of decompresed arrays execution time: %f",end-section_start)
+
+    return([lons, lats, measurements, meas_metadata['fill_value']])
 
 def azure_to_json(startEdge=(0,0), 
                     nGrids=10, 
                     gridSize=1, 
                     depthIdx=0,
                     timeIdx=0,
-                    ):
+                    dataset={'dataset':'nordfjord32m', 'type':'temperature'}):
     ''' 
     Inserts netCDF data from 'startEdge' in a square of size 'nGrids' in positive lat/lon
     index direction into a geojson whose path is described as output. 
     It appends geojson template dictionaries from a given file-path into a 
-    temporary data variable, whose data is changed and dumped into output file..
+    temporary data variable, whose data is changed and dumped into output object.
+
+    Parameters
+    ----------
+    depthIdx : int
+        the depth of the grid to be computed
+    timeIdx : string
+        the time index of the grid to be computed
+    filetype : dict
+        dictionary containing what dataset and measurement type to be computed
     '''
     start = time.time() 
 
@@ -127,30 +191,11 @@ def azure_to_json(startEdge=(0,0),
     # Get the feature template, this will be appended to jsonData for each feature inserted
     feature_template = get_feature_template()
 
-    # azure zarr-blob object
-    absstore_obj = create_blob_client()
+    # download z-arrays from azure cloud and decompress requested chunks
+    [lons, lats, measurements, fill_value] = get_decompressed_arrays(dataset, timeIdx, depthIdx)
 
-    section_start = time.time()
-    decom_meas = zarr.blosc.decompress(absstore_obj['temperature/{}.{}.0.0'.format(timeIdx,depthIdx)])
-    decom_lats = zarr.blosc.decompress(absstore_obj['gridLons/0.0'])
-    decom_lons = zarr.blosc.decompress(absstore_obj['gridLats/0.0'])
-    end = time.time()
-    logging.warning("decompressing azure blob chunks execution time: %f",end-section_start)
-
-    # get the shape of the array using metadata
-    metadata = absstore_obj['gridLats/.zarray']
-    shape = tuple(json.loads(metadata)['chunks'])
-
-    # create numpy arrays from the decompressed buffers and give it our grid shape
-    section_start = time.time()
-    lons = np.frombuffer(decom_lats, dtype='<f4').reshape(shape)
-    lats = np.frombuffer(decom_lons, dtype='<f4').reshape(shape)
-    measurements = np.frombuffer(decom_meas, dtype='<f4').reshape(shape)
-    end = time.time()
-    logging.warning("creating numpy arrays of decompresed arrays execution time: %f",end-section_start)
-
-    # finding min/max for color encoding for this grid, this should
-    set_colormap_range({'min': measurements.min(), 'max': measurements.max()})
+    # find min and max and set the color encoding for displaying change on map
+    set_colormap_encoding_range(measurements, fill_value)
 
     # featureIdx counts what feature we are working on = 0,1,2,3, ... 
     featureIdx = 0
@@ -160,7 +205,7 @@ def azure_to_json(startEdge=(0,0),
             edge = (startEdge[0]+y, startEdge[1]+x)       
             # if temp=nan: skip grid -> else: insert lat/lon and temp into data
             measurement = float(measurements[edge])
-            if math.isnan(measurement) or measurement < -30000:
+            if math.isnan(measurement) or measurement == -32768:
                 continue
             else:
                 # add a copy of the feature dictionary template to features
@@ -174,7 +219,7 @@ def azure_to_json(startEdge=(0,0),
                 
                 featureIdx = featureIdx + 1
 
-    logging.warning("showing surface temperature")
+    logging.warning("showing %s for %s", dataset['type'], dataset['dataset'])
     logging.warning("startEdge: %s, nGrids: %d, depthIdx: %d, timeIdx: %d",startEdge,nGrids,depthIdx,timeIdx)
     #write_output(jsonData)
 
@@ -213,3 +258,14 @@ the insertion loop still took 1.5e-2 seconds. Maybe implement multithreading, sp
 the resource between different grid squares.
 
 '''
+
+
+# TODO: Keep this for quick-testing for now..
+#dataset={'dataset':'nordfjord32m', 'type':'temperature'}
+#dataset={'dataset':'nordfjord32m', 'type':'salinity'}
+#dataset={'dataset':'norsok', 'type':'temperature'}
+
+#azure_to_json(nGrids=100, 
+#                    depthIdx=0,
+#                    timeIdx=0,
+#                    dataset=dataset)

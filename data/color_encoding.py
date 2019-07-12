@@ -26,9 +26,14 @@ def set_colormap_range(extrema_dict):
     ''' simply finds the lowest and highest measured value in the 
         dataset and sets the globals for future color encodings of the same
         dataset '''
-    meas_max = extrema_dict['min']
-    meas_min = extrema_dict['max']
-    logging.warning("updated colormap range %s", extrema_dict)
+    global meas_max
+    global meas_min
+    if any(np.isnan(val) for val in extrema_dict.values()):
+        logging.warning("slice only contains nan, won't update color map")
+    else:
+        meas_max = extrema_dict['max']
+        meas_min = extrema_dict['min']
+        logging.warning("updated colormap range %s", extrema_dict)
 
 
 #-------------- value <-> RGB <-> hexadecimal --------------

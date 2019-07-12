@@ -48,3 +48,15 @@ root.zarr
     `-- gridLats
         |-- ...
 ```
+### 3.2 Simple tutorial when working with netcdf and zarr files
+The xarray project has a zarr backend that allows for converting to and from xarray to zarr file structure. Since this feature is still young, xarray can only open zarr datasets that have been written by xarray.
+##### 3.2.1 opening netCDF dataset in Xarray
+Simply open the netCDF dataset:
+```python
+import xarray as xr
+ds = xr.open_dataset('/path/to/mydataset.nc')
+```
+One can also open multiple datasets if they comprise a single dataset split into more than one file. If the files are properly formatted and sufficiently homogeneous, you can open them with a single line of xarray code:
+```python
+import xarray as xr
+ds = xr.open_dataset('/path/to/mydataset/*.nc')
