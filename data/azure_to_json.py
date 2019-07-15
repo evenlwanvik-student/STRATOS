@@ -85,6 +85,18 @@ def get_feature_template():
     with open(feature_template_path) as feature_json_template:
         return json.load(feature_json_template)
 
+''' netcdf_to_json should just return the json object instead of writing it to file
+
+def write_output(data):
+    # open and dump data to output geojson file, remove if exists
+    if os.path.isfile(output_path):
+        os.remove(output_path)
+    # open the final product file as output 
+    with open(output_path, "w+") as output: 
+        # dump new data into output json file 
+        json.dump(data, output, indent=4)    
+'''
+
 def create_blob_client(dataset):
     ''' TODO: This should be made to properly react to user input, for now we only
     switch between one measurement per norsok and franfjorden. 
