@@ -3,8 +3,7 @@ netcdf4
 xarray
 matplotlib
 numpy
-zarr
+# zarr
 azure
 dask
 toolz
-blosc

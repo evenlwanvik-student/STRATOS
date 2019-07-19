@@ -93,3 +93,68 @@ It is possible to for instance append new groups to an existing blob, but this w
     block_blob_service.get_blob_to_path(container_name, blob_name, output_path)
 with xr.open_dataset(netcdf_path, chunks=chunks) as ds:
 ```
+
+## 4  Decapitating bottlenecks
+### 4.1 Generating geojson object
+Before we started this mission (15/07/2019), the average execution time (100 samples) for generating a geojson output object with 250 grids specified took about 6.32 seconds.
+
+#### 4.1.1 testing deepcopy
+After a lot of testing and averaging with over 10 runs at 250 grid size, it seems like deepcopy occupies about **2.11/5.51 ~ 38.3%** of the execution time. By replacing the deepcopy call
+```python
+jsonData['features'].append(deepcopy(feature_template))
+```
+by 
+```python
+jsonData['features'].append(json.loads(json.dumps(x)))
+```
+the fraction was reduced to **1.86/5.06 ~ 36,7%**. Not a significant reduction, but i guess every little helps. 
+The next test was rather to open the ```features``` template once, and dump/load or deepcopy the template every time, maybe it is faster to just open the template every time it is to be appended?
+```python
+def get_feature_template():
+    with open(feature_template_path) as feature_json_template:
+        return json.load(feature_json_template)
+jsonData['features'].append(get_feature_template())
+```
+With this I managed to reduce the average execution time to 4.97 seconds, where appending the feature used **1.41/4.97 ~ 28%** of the total execution time, which is a almost a 10% reduction!
+Opening a file every time for n^2 grids seems a bit tedious, so the next thing on the menu was to simply have a function where the template ```feature``` dictionary is simply static code:
+```python
+def get_feature_template():
+    return {"type": "Feature",
+            "properties": {"fill": "#00aa22"},
+            "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [[[ 0.0,0.0], [ 0.0,0.0], [ 0.0,0.0], [ 0.0,0.0], [ 0.0,0.0] ]]}}
+```
+This seemed to be the most effective solution by far, as it further reduced the time spent on appending the template dictionary by **0.080/3.38 ~ 2.37%**. No clue why I didn't come to this simple conclusion initially..
+Anywow, with the temlate appending only occupying 2.3% of the execution time, which is a ~36% reduction from when we appended a deepcopy of a dictionary object, we can further investigate other bottlenecks.
+
+#### 4.1.2 appending list vs using nested loop
+The original algorithm used a nested loop which traveled in a square formation with a area of 1 geospacial index in lat/lon direction. This square makes up a polygon which is inserted into the geo
+
+
+Tested two different methods: 
+1. Nested loop for inserting polygon coordinates into the list returned to the geojson feature the algorithm is working on. **Average execution time with 100 samples: 6.32s**. The algorithm would do something like this:
+```python
+for y in range(n)
+    for x in range(n)
+    list = []
+        for i in range(2)
+            for j in range(2)
+                list.append([lat[i,j],lon[i,j]]) 
+    feature['geometry']['coordinates'][0] = list
+```
+
+2. Simply inserting a list with the given indexing for a polygon directly into the coordinates of the feature. **Average execution time with 100 samples: 5.98s**
+```python
+for y in range(n)
+    for x in range(n)
+        feature['geometry']['coordinates'].append([
+            [lats[y,x], lons[y,x]],
+            [lats[y+1,x], lons[y+1,x]],
+            ... )]
+```
+
+As thought, there is no significant time difference. However, it is much more readable and spends less memory, so the new method (nr. 2) is preferred.
+
+#### 4.1.3 Reduce size of geojson object
+When we have a grid of about 200x200 measurements, the geojson object is about 8-9Mb. Since we have to define 5 edges for Leaflet to create the given polygon, and each latitude and longitude is encoded as 64 bit floats (16 decimals and 1-3 integer), each polygon spends about 20 * 5 * 2 (20 characters * 5 edges * 2 lat/lon coordinates) = 200 characters for each polygon. Let's say we have a 200x200 grid, the original size spent on defining the coordinates of the polygons would then be at 8,000,000b - 8.0Mb. When testing a 250x250 grid, the generated output file with full precision (16 decimals) was ```19.1 Mb``` and with rounding (4 decimals) it was at ```17.0 Mb```. It is not a very powerful reduction, but considering that about half of the measurements were on land, and hence won't be included in the geojson object, i believe that this will scale and have some significance for larger datasets..

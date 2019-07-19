@@ -6,80 +6,143 @@
 <head>
   <meta charset="utf-8">
 
-  <title>MVP 1</title>
+  <title>Stratos</title>
   <meta name="description" content="MVP 1">
   <meta name="author" content="Maria Skårdal & Even Wanvik">
 
   <link href="../static/styleSheet.css" rel="stylesheet" type="text/css">
-  <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7/leaflet.css" />
+  
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.5.1/dist/leaflet.css"
+  integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
+  crossorigin=""/>
 
-  <script src="http://cdn.leafletjs.com/leaflet-0.7/leaflet.js"></script>
+
+
   <script src="https://d3js.org/d3.v3.min.js" type="text/javascript"></script>
+
+  <script src="https://code.jquery.com/jquery-3.4.1.js" integrity="sha256-WpOohJOqMqqyKL9FccASB9O0KwACQJpFTUBLTYOVvVU="
+  crossorigin="anonymous"></script>
+
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>window.jQuery || document.write('<script src="{{url_for('static', filename='jquery.js') }}">\x3C/script>')</script>
+
+  <script src="https://d3js.org/topojson.v1.min.js"></script>
 
 
 </head>
 
-<body>
-    <h1>{{ name }}</h1>
-    <br>
-    <div id="map"></div>
 
-    <!-- PLACEHOLDERS for JavaScript parameters-->
-    <p hidden id="geojson">{{geoData}}</p>
-    <p hidden id="zoom">{{zoom}}</p>
-    <p hidden id="lat">{{lat}}</p>
-    <p hidden id="long">{{long}}</p>
-    <p hidden id="menu">{{menu}}</p>
-
-    <!--Dropdown menu template-->
-    <p id="Menus">    
-        <div id="cssmenu">
-
-          <a href="http://127.0.0.1:5000/index" class="button">World map</a>
-
-          <div class="dropdown">
-            <button class="dropbtn">Select location</button>
-            <div class="dropdown-content">
-            <a href= "http://127.0.0.1:5000/location">Frænfjorden</a>
-            <a href="#">Narnia</a>
-            <a href="#">Hogwarts</a>
-            </div>
-          </div>
-          
-          <div class="dropdown">
-            <button class="dropbtn">Select data</button>
-            <div class="dropdown-content">
-            <a href= "http://127.0.0.1:5000/geojson">Temperature</a>
-            <a href="#">Salinity</a>
-            <a href="#">Oil particles</a>
-            </div>
-          </div>
-
-      </div>
-    </p>
-
-    <!--Input Field template-->
-    <!--
-    <p hidden id="inputField">    
-        <div id="cssmenu">
-            <form id="form1" action = "http://localhost:5000/with_grid" method=POST>
-            Number of grids: <input type="number" name="grid" min="1" max="20"><br>
-            <input type="button" onclick="redirectWithGrid()" value="submit">
-            </form>
-        </div>
-    </p>
-    -->
-    <div id="cssmenu">
-      <form id="parameters" action="http://localhost:5000/inputgrid" method="POST">
-        <p> Number of grids (1-60): <input type="number" name="nGrids" min="1" max="290"/></p>
-        <!--<p> Grid start edge (0,0): <input type="text" name="startedge" maxlength="5"/></p>-->
-        <p> Depth: <input type="number" name="depth" min="0" max="30"/></p>
-        <p> Date: <input type="date" name="date"/></p>
-        <p> <input type="submit" action="http://localhost:5000/inputgrid" method="POST" class="submitButton" value="submit"/></p>
-      </form>
+<!--when loading index body, run function populating the dataset drop-down menu-->
+<body onload="populateDatasetMenu()">
+  
+  <div id="leftDiv"> 
+      <img src="static/images/logo.png" >
+      <nav>
+        <ul>
+          <li><a href="/">Doc</a></li>
+          <li><a href="/index">Refresh</a></li>
+        </ul>
+      </nav>
+      <br>
     </div>
+  <div id="rightDiv"> 
+    <div id="map" style="align-content: top;"> </div>
+    <div style="align-content: bottom;">
+      <!-- PLACEHOLDERS for JavaScript parameters-->
+      <p hidden id="geodata">{{geoData}}</p>
+      <p hidden id="zoom">{{zoom}}</p>
+      <p hidden id="lat">{{lat}}</p>
+      <p hidden id="long">{{long}}</p>
+
+      <!--Dropdown menu template-->
+      <p id="Menus">    
+          <div id="cssmenu">
+
+            
+            <a href="/index" class="button">Reset map</a>
 
 
-    <script type="text/javascript" src="../static/javaScript.js"></script> 
+            <!--
+            <div class="dropdown">
+              <button class="dropbtn">Select dataset</button>
+              <div class="dropdown-content">
+              <a onclick=update_dataset()>Franfjorden - surface temperature</a>
+              <a href= "/franfjorden_salinity">Franfjorden - salinity</a>
+              <a href= "/norsok_temperature">Franfjorden - surface temperature</a>
+              </div>
+            </div>
+            
+            <!- -<div class="dropdown">
+              <button class="dropbtn">Select data</button>
+              <div class="dropdown-content">
+              <a href= "/geojson">Temperature</a>
+              <a href="#">Salinity</a>
+              <a href="#">Oil particles</a>
+              </div>
+            </div>- ->
+
+            <!- -<a onclick="loadTOPO();" class="button">Load TopoJSON</a>- ->
+            <!- -<a onclick="loadGEO();" class="button">Load GeoJSON</a>- ->
+            -->
+                      
+            <a id="timelapse" class="button">Start time-lapse</a>
+            <a id="depthseries" class="button">Start depth series</a>
+          </div>
+      </p>
+
+
+
+
+
+      <!--Input Field template-->
+      <div id="cssmenu">
+        <form id="parameters">
+              
+          <div>
+              <label>Dataset:</label>
+              <select id="datasetMenu" name="dataset" type="text" onchange="populateDatatypeMenu(dataset)">
+                  <option value="norsok" diabled>-- Select --</option>
+              </select>
+          </div>
+          <div>
+              <label>Datatype:</label>
+              <select id="datatypeMenu" name="datatype" type="text">
+                <option selected="true" value="temperature" disabled>-- Select --</option>
+              </select>
+          </div>
+
+          <p> Number of gridcells: <input type="number" name="gridcells" min="0" max="292"/></p>
+          <!--<p> Grid start edge (0,0): <input type="text" name="startedge" maxlength="5"/></p>-->
+          <p> Depth index: <input type="number" name="depth" min="0" max="29"/></p>
+          <p> Time index: <input type="number" name="time" min="0" max="29"/></p>
+
+        <input id=reload type="submit" class="submitButton" value="submit"/></p>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.5.1/dist/leaflet.js"
+  integrity="sha512-GffPMF3RvMeYyc1LWMHtK8EbPv0iNZ8/oTtHPx9/cc2ILxQ+u905qIwdpULaqDkyBKgOaB57QTMg7ztg8Jm2Og=="
+  crossorigin=""></script>
+
+  <script type="text/javascript" src="../static/javaScript.js"></script> 
+  
+
+
+
+  <div>
+    <footer>
+      
+    </footer>
+  </div>
 </body>
+
+<div id="footer_container">
+    <div class="footer">
+        © Stephen the alpacca     
+        <a href="#top"><p>Back To Top</p></a>
+    </div>
+</div>
+
 </html>
