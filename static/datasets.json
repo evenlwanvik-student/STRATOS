@@ -1,0 +1,65 @@
+{
+    "Franfjorden32m": 
+    {
+        "typename": [
+            "salinity", 
+            "temperature", 
+            "u_east", 
+            "v_north", 
+            "w_east", 
+            "w_north",
+            "w_velocity"
+        ],
+        "blobpath": "Franfjorden32m/samples_NSEW_2013.03.11_chunked-time&depth.zarr"
+    },
+    "norsok":
+    {
+        "typename": [
+            "salinity", 
+            "temperature", 
+            "u_east", 
+            "v_north", 
+            "w_east", 
+            "w_north",
+            "w_velocity"
+        ],
+        "blobpath": "norsok/samples_NSEW.nc_201301_nc4.zarr"
+    },
+    "OSCAR_concentration":
+    {
+        "typename": 
+        [
+            "concentration", 
+            "total_concentration"
+        ],
+        "blobpath": "OSCAR/TEST3MEMWX.XNordlandVI_concentration.zarr"
+    },     
+    "OSCAR_evap":
+    {
+        "typename": 
+        [
+            "evaporated_mass_flux"
+        ],
+        "blobpath": "OSCAR/TEST3MEMWX.XNordlandVI_evap.zarr"
+    },
+    "OSCAR_physstress":
+    {
+        "typename": ["oxygen_deficit, temperature_difference"],
+        "blobpath": "OSCAR/TEST3MEMWX.XNordlandVI_physstress.zarr"
+    },
+    "OSCAR_sediment":
+    {
+        "typename": ["sediment_grain_size", "sediment_grain_size_by_component", "sediment_mass_per_unit_area", "sediment_mass_per_unit_area_by_component", "sediment_thickness", "sediment_thickness_by_component"],
+        "blobpath":"OSCAR/TEST3MEMWX.XNordlandVI_sediment.nc"
+    },
+    "OSCAR_shoreoline":
+    {
+        "typename": ["oil_mass_per_unit_area_on_shoreline", "oil_mass_per_unit_area_on_shoreline_by_component"],
+        "blobpath": "TEST3MEMWX.XNordlandVI_shoreline.zarr"
+    },
+    "OSCAR_surface":
+    {
+        "typename": ["aspahltene_fraction","cell_coverage","dispersability","emulsion_viscosity","flashpoint","surface_avg_asphaltene_fraction_distribution_by_thickness","surface_avg_coverage_distribution_by_thickness","surface_avg_flashpoint_distribution_by_thickness","surface_avg_viscosity_distribution_by_thickness","surface_avg_water_content_distribution_by_thickness","surface_avg_wax_fraction_distribution_by_thickness","surface_oil_thickness","water_content","wax_fraction"],
+        "blobpath": "OSCAR/TEST3MEMWX.XNordlandVI_surface.zarr"
+    }
+}

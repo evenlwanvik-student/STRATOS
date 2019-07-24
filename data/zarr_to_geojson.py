@@ -8,7 +8,9 @@ import zarr
 import sys
 import logging
 import warnings
-from data.color_encoding import temp_to_rgb, set_colormap_range
+# from color_encoding import temp_to_rgb
+from data.color_encoding import temp_to_rgb
+import config
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
@@ -32,6 +34,18 @@ logging.basicConfig(
 # define paths to files
 initial_template_path = "data/templates/initial_template.json"
 feature_template_path = "data/templates/feature_template.json"
+
+# Create encoder to avoid serialization problem
+class JsonEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        else:
+            return super(JsonEncoder, self).default(obj)
 
 
 #TODO: Old method of creating the polygon, remove before pull?
@@ -84,7 +98,7 @@ def get_feature_template():
 #azure_to_json should just return the json object instead of writing it to file.
 #TODO: remove if deemed unecesarry in future, keeping it in case we decide to roll back
 def write_output(data):
-    output_path = "data/outputs/geojson.json"
+    output_path = "data/outputs/written_geojson.json"
     # open and dump data to output geojson file, remove if exists
     if os.path.isfile(output_path):
         os.remove(output_path)
@@ -93,10 +107,8 @@ def write_output(data):
         # dump new data into output json file 
         json.dump(data, output, indent=4)  
 
-def create_blob_client(dataset):
-    ''' TODO: This should be made to properly react to user input, for now we only
-    switch between one measurement per norsok and franfjorden. 
-    It should also be able to react to type of measurement, e.g. temperature, wind..'''
+def get_blob_client(dataset):
+    ''' create a client for the requested dataset '''
 
     CONTAINER_NAME  = 'zarr'
     ACCOUNT_NAME    = 'stratos'
@@ -104,67 +116,81 @@ def create_blob_client(dataset):
     absstore_object = zarr.storage.ABSStore(CONTAINER_NAME, dataset, ACCOUNT_NAME, ACCOUNT_KEY)
     return absstore_object
 
-
-def set_colormap_encoding_range(measurements, fill_value):
-    # finding min/max for color encoding for this grid, this should
-    if fill_value == np.NaN:
-        set_colormap_range({'min': measurements.nanmin(), 'max': measurements.nanmax()})
-    elif fill_value == -32768:
-        # omit fillvalues for finding minimum..
-        x = measurements[measurements > -32768]
-        set_colormap_range({'min': x.min(), 'max': x.max()})
-    else:
-        warnings.warn("unknown encoding of fill_value, insert in this if-else-section")
-
-def get_correct_dimensions(dataset):
+def get_correct_coord_dimensions(dataset_name):
     ''' Different names of latitude/longitude. Most likely a multitude of metadata will
     vary in the future, this should be properly managed. Currently this function takes 
-    ataset name as argument and returns the correct lat/(lon encoding'''
+    dataset name as argument and returns the correct lat/lon encoding'''
 
-    if (dataset.split('/')[0] == 'OSCAR'):
-        return ("latitude_bounds", "longitude_bounds")
+    if (dataset_name == 'OSCAR'):
+        return ('latitude', 'longitude')
     else:
-        return ("gridLats", "gridLons")
+        return ('gridLats', 'gridLons')
 
-# TODO: Problems with shape, just run it...
+def get_chunk_blob_encoding(blob_chunks, time):
+    ''' get the correct string for extracting correct blob, e.g. the "0.0.0.0" in 
+    client['temperature'/0.0.0.0]. The coordinates and the '''
+    def switch(x): return [f'',2,3,4][x]
+    string = switch(dim)
+
 
 def get_decompressed_arrays(dataset, depthIdx=0, timeIdx=0):
+
+    # get the dataset name from blobpath "OSCAR/ ..."
+    dataset_name = dataset['blobpath'].split('/')[0]
+
     # azure zarr-blob object
-    absstore_obj = create_blob_client(dataset['dataset'])
-    (latalias, lonalias) = get_correct_dimensions(dataset['dataset'])
-    datatype = dataset['measurementtype']
-    print(latalias)
+    absstore_obj = get_blob_client(dataset['blobpath'])
+
+    # get correct dimensions and coordinate blob chunk path
+    (latalias, lonalias) = get_correct_coord_dimensions(dataset_name)
+    measurementtype = dataset['measurementtype']
+
+    # get the shape and datatypes of the datasets
+    lat_metadata = json.loads(absstore_obj[f'{latalias}/.zarray'])
+    lon_metadata = json.loads(absstore_obj[f'{lonalias}/.zarray'])
+    meas_metadata = json.loads(absstore_obj[f'{measurementtype}/.zarray'])
+    lat_dims= lat_metadata['chunks']
+    lon_dims = lon_metadata['chunks']
+    meas_dims = meas_metadata['chunks']
+    coord_datatype = lat_metadata['dtype']
+    meas_datatype = meas_metadata['dtype']
+
     section_start = time.time()
-    decom_meas = zarr.blosc.decompress(absstore_obj['{}/{}.{}.0.0'.format(datatype,timeIdx,depthIdx)])
-    decom_lats = zarr.blosc.decompress(absstore_obj['{}/0.0'.format(latalias)])
-    decom_lons = zarr.blosc.decompress(absstore_obj['{}/0.0'.format(lonalias)])
+    # append strings to create the correct zr blob path
+
     end = time.time()
     logging.warning("decompressing azure blob chunks execution time: %f",end-section_start)
+    # if lat/lon is 2d, e.g. lat/lon is are grid coordniates, different paths for extracting
+    # chunk, and different ways of creating a reshaping tuple for the measurements
+    if len(lat_dims)==2:  
+        meas_shape = tuple(lat_dims)
+        coord_chunks = '0.0'
+    else:                   
+        meas_shape = (lat_dims[0],lon_dims[0])
+        coord_chunks = '0'
 
-    #The metadata for coodinates might be different from the measurement
-    coord_metadata = json.loads(absstore_obj['{}/.zarray'.format(latalias)])
-    meas_metadata = json.loads(absstore_obj['{}/.zarray'.format(datatype)])
-    coord_shape = tuple(coord_metadata['chunks'])
-    meas_shape = coord_shape
-    coord_datatype = coord_metadata['dtype']
-    meas_datatype = meas_metadata['dtype']
+    # insert conditional check for time, depth and possible other dimensions..
+    decom_meas = zarr.blosc.decompress(absstore_obj[f'{measurementtype}/{timeIdx}.{depthIdx}.0.0'])
+    decom_lats = zarr.blosc.decompress(absstore_obj[f'{latalias}/{coord_chunks}'])
+    decom_lons = zarr.blosc.decompress(absstore_obj[f'{lonalias}/{coord_chunks}'])
 
     # create numpy arrays from the decompressed buffers and give it our grid shape
     section_start = time.time()
-    lons = np.frombuffer(decom_lats, dtype=coord_datatype).reshape(coord_shape)
-    lats = np.frombuffer(decom_lons, dtype=coord_datatype).reshape(coord_shape)
+    print(meas_datatype)
+    lats = np.frombuffer(decom_lats, dtype=coord_datatype).reshape(meas_shape)
+    lons = np.frombuffer(decom_lons, dtype=coord_datatype).reshape(meas_shape)
     measurements = np.array(np.frombuffer(decom_meas, dtype=meas_datatype).reshape(meas_shape))
     end = time.time()
     logging.warning("creating numpy arrays of decompresed arrays execution time: %f",end-section_start)
 
-    return([lons, lats, measurements, meas_metadata['fill_value']])
+    return([lats, lons, measurements, meas_metadata['fill_value']])
 
-def azure_to_json(startEdge=(0,0), 
+def zarr_to_geojson(startEdge=(0,0), 
                     nGrids=10, 
                     gridSize=1, 
                     depthIdx=0,
                     timeIdx=0,
-                    dataset={'dataset':'Franfjorden32m', 'measurementtype':'temperature'}):
+                    dataset={'dataset':'', 'measurementtype':''}):
     ''' 
     Inserts netCDF data from 'startEdge' in a square of size 'nGrids' in positive lat/lon
     index direction into a geojson whose path is described as output. 
@@ -177,23 +203,31 @@ def azure_to_json(startEdge=(0,0),
         the depth of the grid to be computed
     timeIdx : string
         the time index of the grid to be computed
-    filetype : dict
+    dataset : dict
         dictionary containing what dataset and measurement type to be computed
     '''
+
+
     start = time.time() 
+
+    measurement_type = dataset['measurementtype']
+    # get the dataset name from blobpath "OSCAR/ ..."
+    dataset_name = dataset['blobpath'].split('/')[0]
 
     # Get the initial template
     jsonData = get_initial_template() 
     # Get the feature template, this will be appended to jsonData for each feature inserted
 
     # download z-arrays from azure cloud and decompress requested chunks
-    [lons, lats, measurements, fill_value] = get_decompressed_arrays(dataset, timeIdx, depthIdx)
+    [lats, lons, measurements, fill_value] = get_decompressed_arrays(dataset, timeIdx=timeIdx, depthIdx=depthIdx)
 
-    # find min and max and set the color encoding for displaying change on map
-    set_colormap_encoding_range(measurements, fill_value)
+    logging.warning(f"configured range for {measurement_type}: "
+                        f"{config.color_enc[dataset_name][measurement_type]['min']} to "
+                        f"{config.color_enc[dataset_name][measurement_type]['max']}")
 
     # featureIdx counts what feature we are working on = 0,1,2,3, ... 
     featureIdx = 0
+    geojson_start = time.time()
     for y in range(nGrids):                 
         for x in range(nGrids):   
             measurement = measurements[(y,x)]
@@ -206,11 +240,21 @@ def azure_to_json(startEdge=(0,0),
                 # create a reference to the current feature we are working on
                 feature = jsonData['features'][featureIdx]
                 # insert hex into fill
-                feature['properties']['fill'] = temp_to_rgb(measurement) 
+                print(float(measurement))
+                feature['properties']['fill'] = temp_to_rgb(measurement, measurement_type, dataset_name) 
  
                 # insert lat/lon data. each line is a grid coordinate in a polygon sequence.
                 # i.e. (0,0) -> (0,1) -> (1,1) -> (1,0) -> (0,0)
                 # rounding from 16 (64bit) to 4 decimals, convert to string for json serialization
+                counter_start = time.time() 
+                feature['geometry']['coordinates'].append( [
+                    [round(lons[y,x],4), round(lats[y,x],4)],
+                    [round(lons[y,x+1],4), round(lats[y,x+1],4)],
+                    [round(lons[y+1,x+1],4), round(lats[y+1,x+1],4)],
+                    [round(lons[y+1,x],4), round(lats[y+1,x],4)],
+                    [round(lons[y,x],4), round(lats[y,x],4)]
+                ])
+                '''
                 feature['geometry']['coordinates'].append( [
                     [str(round(lons[y,x],4)), str(round(lats[y,x],4))],
                     [str(round(lons[y,x+1],4)), str(round(lats[y,x+1],4))],
@@ -218,28 +262,36 @@ def azure_to_json(startEdge=(0,0),
                     [str(round(lons[y+1,x],4)), str(round(lats[y+1,x],4))],
                     [str(round(lons[y,x],4)), str(round(lats[y,x],4))]
                 ] )
-                
+                '''
+
                 featureIdx = featureIdx + 1
 
-    logging.warning("showing %s for %s", dataset['measurementtype'], dataset['dataset'])
+    logging.warning("creating geojson object execution time: %f",time.time()-geojson_start)
+
+    logging.warning("showing %s for %s", dataset['measurementtype'], dataset['blobpath'])
     logging.warning("startEdge: %s, nGrids: %d, depthIdx: %d, timeIdx: %d",startEdge,nGrids,depthIdx,timeIdx)
 
     end = time.time()
-    logging.warning("total execution time of azure to json function: %f",end-start)
-    #write_output(jsonData)
-    return jsonData
+    logging.warning("total execution time of azure to json function: %f",start-end)
+    
+    #start_write = time.time() 
+    #write_output(json.dumps(jsonData, cls=JsonEncoder))
+    #end = time.time()
+    #logging.warning("time spent writing to file: %f",end-start_write)
 
+    return json.dumps(jsonData, cls=JsonEncoder)
 
-# TODO: Keep this for quick-testing of both algorithm and execution time..
 '''
-dataset={'dataset':'Franfjorden32m', 'measurementtype':'temperature'}
-#dataset={'dataset':'Franfjorden32m', 'measurementtype':'salinity'}
+# TODO: Keep this for quick-testing of both algorithm and execution time..
+
+#dataset={'dataset':'Franfjorden32m/samples_NSEW_2013.03.11_chunked-time&depth.zarr', 'measurementtype':'temperature'}
+dataset={'dataset':'norsok/samples_NSEW.nc_201301_nc4.zarr', 'measurementtype':'salinity'}
 #dataset={'dataset':'norsok', 'measurementtype':'temperature'}
 
-N = 5
+N = 1
 start = time.time()
 for i in range(N):
-    azure_to_json(nGrids=200, 
+    zarr_to_geojson(nGrids=200, 
                         depthIdx=0,
                         timeIdx=0,
                         dataset=dataset)
