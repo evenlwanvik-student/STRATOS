@@ -2,20 +2,20 @@
 
 from flask import Flask, render_template, jsonify, request, redirect, flash, \
     get_flashed_messages, url_for
-from netCDF4 import Dataset
 import numpy as np
 import json
 import sys
 import logging
 
-from data.getZoom import returnZoom
-from data.zarr_to_geojson import zarr_to_geojson
-from data.zarr_to_topo import zarr_to_topo
+# from data.zarr_to_geojson import zarr_to_geojson
+# from data.zarr_to_topo import zarr_to_topo
+# from data.get_cloud_json import get_json_blob
 
 # If running outside container use this instead:
-# from .data.getZoom import returnZoom
-# from .data.zarr_to_geojson import zarr_to_geojson
-# from .data.zarr_to_topo import zarr_to_topo
+from data.zarr_to_geojson import zarr_to_geojson
+from data.zarr_to_topo import zarr_to_topo
+from data.get_cloud_json import get_json_blob
+from data.zarr_to_velocity import zarr_to_velocity
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
@@ -27,11 +27,7 @@ app.secret_key = "superduper secret key"
 
 @app.route('/')
 def login():
-	return redirect('/home')
-
-@app.route('/home')
-def home():
-    return render_template('README.html')
+	return redirect('/index')
 
 @app.route('/index')
 def index(error=""):
@@ -41,54 +37,11 @@ def index(error=""):
 @app.route('/location')
 def location():
     logging.warning("redirected to location")
-    zoom = returnZoom()  # this function needs to depend on number of grids
     return render_template('index.html', 
         name = 'Franfjorden', #Hardcoded, get from form maybe?
-        lat = 62.8133,    #Hardcoded at the moment, should be easy to read
-        long = 7.0035,
-        zoom = zoom)
-
-
-@app.route('/geojson')
-def geojson():
-    logging.warning("redirected to geojson")
-    gridcells = 0
-    depth = 0
-    startEdge=(0,0)
-    jsondata = zarr_to_geojson(startEdge=startEdge, nGrids=gridcells, depthIdx=depth)
-    zoom = returnZoom()
-    return render_template('index.html', 
-        name = 'Temperature data',  #Hardcoded, get from form maybe?
-        geoData = jsondata, 
-        lat = 62.8133,    #Hardcoded at the moment, should be easy to read
-        long = 7.0035,
-        zoom = zoom)
-
-#Nothing routes to this for the time being... should be removed eventually?
-'''
-@app.route('/inputgrid', methods = ['POST', 'GET'])
-def result():
-    logging.warning("redirected to inputgrid")
- # todo: grid and startEdge should be moved inside if request==post when figured out
-    post = request.form
-    grid = 1
-    grid = int(post['nGrids'])
-    depth = int(post['depth'])
-    startEdge = (0,0)
-
-    # set zoom, todo: make this dynamic depending on start and end grid?
-    zoom = returnZoom()
-    zarr_to_geojson(startEdge=startEdge, nGrids=grid, depthIdx=depth)
-
-    with open ('data/outputs/surface_temp.json') as inf:
-        jsondata = inf.read() #Not sure if its necessary to read, maybe possible to just dump
-    return render_template('index.html', 
-        name = 'Customized grid', 
-        geoData = jsondata, 
-        lat = 62.8133,    #Hardcoded at the moment, should be easy to read
-        long = 7.0035,
-        zoom = zoom)
-'''
+        zoom = 12,
+        lat = 62.828181,    #Hardcoded at the moment, should be easy to read
+        long = 7.130122)
 
 @app.route('/loadGeojson')
 def loadGeojson():
@@ -107,19 +60,7 @@ def loadGeojson():
     else:
         logging.warning(f'trying to generate a geojson object for {dataset_dict}')
         return jsonify(geojson=zarr_to_geojson(nGrids=gridcells, depthIdx=depth, timeIdx=time, dataset=dataset_dict),
-                        zoom=returnZoom(), lat=62.8133, lon=7.0035)
-
-@app.route('/timelapse')
-def timelapse():
-    print("::::: redirected to timelapse")
-    time = request.args.get('time', 1, type=int)
-    #Hardcoding for now
-    startEdge=(0,0)
-    depth = 1
-    gridcells = 290
-
-    jsondata = zarr_to_geojson(startEdge=startEdge, nGrids=gridcells, depthIdx=depth, timeIdx=time)
-    return jsonify(geojson=jsondata, time=time) 
+                        zoom=6, lat=68.17184, lon=11.56522)
 
 
 @app.route('/depthSeries')
@@ -131,30 +72,66 @@ def depthSeries():
                     'measurementtype': request.args.get('datatype', "temperature", type=str)}
 
     #Hardcoding for now
-    startEdge=(0,0)
+    startNode=(0,0)
     time = 1
     gridcells = 180
 
-    jsondata = zarr_to_geojson(dataset=dataset_dict, startEdge=startEdge, nGrids=gridcells, depthIdx=depth, timeIdx=time)
-    return jsonify(geojson=jsondata, depthIdx=depth) 
+    # get the dataset and measurement type
+    dataset_dict = {'blobpath': request.args.get('blobpath', 'Franfjorden32m/samples_NSEW_2013.03.11_chunked-time&depth.zarr', type=str), 
+                    'measurementtype': request.args.get('datatype', "temperature", type=str)}
+    if not all(dataset_dict.values()):
+        error = f'one or more arguments are missing: {dataset_dict},  gridcells: {gridcells}, depth: {depth}, , time: {time}'
+        raise ValueError(error)
+    else:
+        logging.warning(f'trying to generate a geojson object for {dataset_dict}')
+        return jsonify(geojson=zarr_to_geojson(nGrids=gridcells, startNode=startNode, depthIdx=depth, timeIdx=time, dataset=dataset_dict),
+                        depthIdx=depth)
 
-
-@app.route('/topoJSON')
-def topoJSON():
-    with open ('data/outputs/topoData.json') as inf:
-        jsondata = inf.read() #Not sure if its necessary to read, maybe possible to just dump
-        print("::::: topoJSON file was read")
-    return jsonify(jsondata)
-
+# Temporary routes used for testing purposes
 @app.route('/getGeo')
 def getGeo():
-    jsondata=zarr_to_geojson(startEdge=(0, 0), nGrids=290)
-    return jsondata
+    '''
+    # get the dataset and measurement type
+    dataset_dict = {'blobpath': request.args.get('blobpath', 'Franfjorden32m/samples_NSEW_2013.03.11_chunked-time&depth.zarr', type=str), 
+                    'measurementtype': request.args.get('datatype', "temperature", type=str)}
+    if not all(dataset_dict.values()):
+        error = f'one or more arguments are missing: {dataset_dict},  gridcells: {gridcells}, depth: {depth}, , time: {time}'
+        raise ValueError(error)
+    else:
+        logging.warning(f'trying to generate a geojson object for {dataset_dict}')
+        return zarr_to_geojson(startNode=(0,0), nGrids=290, dataset=dataset_dict)
+    '''
+    return zarr_to_geojson(startNode=(0,0), nGrids=290)
 
 @app.route('/makeTopo')
 def makeTopo():
-    jsondata=zarr_to_topo(startEdge=(0, 0), nGrids=290)
-    return jsondata
+    # get the dataset and measurement type
+    dataset_dict = {'blobpath': request.args.get('blobpath', 'Franfjorden32m/samples_NSEW_2013.03.11_chunked-time&depth.zarr', type=str), 
+                    'measurementtype': request.args.get('datatype', "temperature", type=str)}
+    if not all(dataset_dict.values()):
+        error = f'one or more arguments are missing: {dataset_dict},  gridcells: {gridcells}, depth: {depth}, , time: {time}'
+        raise ValueError(error)
+    else:
+        logging.warning(f'trying to generate a geojson object for {dataset_dict}')
+        return zarr_to_topo(startNode=(0,0), nGrids=290)
+
+@app.route('/preMadeJSON')
+def preMadeJSON():
+    blob_name = request.args.get('blob_name', type=str)
+    return jsonify(json=get_json_blob(blob_name), blob=blob_name)
+
+
+@app.route('/getVelocityVector')
+def getVelocityVector():
+    ''' calls function to generate a velocity json object and returns to js for rendering'''
+    logging.warning('redirected to "getVelocityVector"')
+
+    dataset_dict = {'blobpath': request.args.get('blobpath', 'Franfjorden32m/samples_NSEW_2013.03.11_chunked-time&depth.zarr', type=str), 
+                    'measurementtype': request.args.get('datatype', "temperature", type=str)}
+ 
+    logging.warning(f'trying to generate a velocity vector object for {dataset_dict}')
+    return jsonify(json=zarr_to_velocity())
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', threaded=True)

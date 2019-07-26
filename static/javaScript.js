@@ -6,6 +6,34 @@ var map = L.map('map').setView([latitude, longitude], zoom);
 L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
 
 
+// Adding legend to map
+var legend = L.control({position: 'bottomright'});
+
+legend.onAdd = function (map) {
+    var div = L.DomUtil.create('div', 'info legend'),
+    grades = [0, 1, 2, 3],
+    labels = [];
+    var degrees = 1;
+    // loop through our density intervals and generate a label with a colored square for each interval
+    for (var i = 0; i < grades.length; i++) {
+        div.innerHTML +=
+            '<i style="background:' + getColor(grades[i] + 1) + '"></i> ' +
+            degrees + grades[i] + '<br>';
+}
+
+return div;
+};
+
+legend.addTo(map);
+
+function getColor(d) {
+  return d > 3   ? '#0779f2' :
+         d > 2   ? '#24aeed' :
+         d > 1   ? '#5ec7f7' :
+                    '#87e1fa';
+}
+
+
 function loadJSON() {
   // create XRMLHttpRequest instance
   var datasets = new XMLHttpRequest(); 
@@ -54,31 +82,51 @@ function populateDatatypeMenu() {
 
 // Loading topoJSON to Leaflet map
 
+// Loading topoJSON to Leaflet map
 function loadTOPO(){
+  map.setView([62.828181, 7.130122], 12);
    $.getJSON('/makeTopo')
    .done(addTopoData);
 }
 
 function addTopoData(topoData) {
-  var geojsonLayer = new L.GeoJSON(topojson.feature(topoData, topoData.objects.geojson), {style: polystyle}).addTo(map);
+  var geojsonLayer = new L.GeoJSON(topojson.feature(topoData, topoData.objects),{style: polystyle}).addTo(map);
   /*  topojson.feature(topology, object) <> translates a topojson-object to a geojson-object.
       It returns a FeatureCollection if the object is of type GeometryCollection and maps each Geometry to a Feature
       The returned feature is a shallow copy of the source object: they may share identifiers, bounding boxes, properties and coordinates. */
 }
 
+function addPreMadeTopo(topoData) {
+  var geojsonLayer = new L.GeoJSON(topojson.feature(topoData, topoData.objects.written_geojson),{style: polystyle}).addTo(map);
+}
+
 //Loading GeoJSON for testing
 function loadGEO(){
+  map.setView([62.828181, 7.130122], 12);
   $.getJSON('/getGeo')
   .done(addGeoData);
+}
+
+function loadPreMadeJSON(jsonType){
+  map.setView([62.828181, 7.130122], 12);
+  $.getJSON('/preMadeJSON',
+    {
+    blob_name: jsonType
+    },
+    function(flask_response){
+      if (flask_response.blob == 'written_geojson.json'){
+        addGeoData(JSON.parse(flask_response.json))
+      } else {
+        addPreMadeTopo(JSON.parse(flask_response.json))
+      }
+    });
 }
 
 function addGeoData(GeoData) {  
   new L.GeoJSON(GeoData, {style: polystyle}).addTo(map);
 }
 
-var geojsonLayerArray = new Array(9);
-
-// Reloading geojson with ajax/jQuery
+// Reloading geojson with input fields, getting new geojson with ajax, fixing html with jQuery
 $(function() {
     $('#reload').bind('click', function() {
       $.getJSON('/loadGeojson', 
@@ -93,43 +141,33 @@ $(function() {
                 {
                     map.setView([flask_response.lat, flask_response.lon], 
                                 flask_response.zoom);
-                    new L.GeoJSON(JSON.parse(flask_response.geojson), 
-                                  {style: polystyle}).addTo(map);
+                    new L.GeoJSON(JSON.parse(flask_response.geojson),{style: polystyle}).addTo(map);
                 });
       return false;
     });
   });
 
-
- // Timelapse with ajax/jQuery
-$(function() {
-  $('#timelapse').bind('click', function() {
-    map.setView([62.828181, 7.130122], 12);
-    var timestep;
-    for (timestep=0; timestep <10; timestep+=1) 
+/* render the velocity vector usin leaflet plugin */ 
+function showVelocityVector() {
+  $.getJSON('/getVelocityVector', 
     {
-      $.getJSON('/timelapse', 
-                {time: timestep}, 
-                function(flask_response) {
-                      // organize geojson layers in array
-                        geojsonLayerArray[flask_response.time]=new L.GeoJSON(flask_response.geojson, {style: polystyle})
-                    });
-    }
-    return false;
-  });
-});
-
-window.setInterval(drawColorLayer, 1000); // calls drawColorLayers every 5 second
-timeIndex = 0;
-function drawColorLayer(){
-  if (geojsonLayerArray[timeIndex] == null){
-    return;
-  }
-  if (timeIndex!=0){
-    geojsonLayerArray[timeIndex-1].clearLayers(); //removes old layer from map
-  }
-  geojsonLayerArray[timeIndex].addTo(map); // add new layer from correct timestep
-  i++;
+      blobpath: $('select[name="dataset"]').val(),
+      datatype: $('select[name="datatype"]').val()
+    },
+    function(flask_response) 
+    {
+      var velocityLayer = L.velocityLayer({
+        displayValues: true,
+        displayOptions: {
+          velocityType: "norsok wind?",
+          displayPosition: "bottomleft",
+          displayEmptyString: "No wind data"
+        },
+        data: flask_response,
+        maxVelocity: 10
+      });
+      console.log("test")
+    });
 }
 
 

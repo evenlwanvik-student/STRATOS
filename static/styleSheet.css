@@ -1,27 +1,39 @@
-h1 {
-    text-align: center;
-    font-size: 25pt;
-    font-family: arial;
-    color: #040422;
-    margin-bottom: 5px;
-    text-decoration: underline;
-}
 
 html, body {
     height: 100%;
     width: 100%;
     margin: 3;
     background-color:#eeeded;
+    align-content: right;
+}
+
+#leftDiv {
+  width: 200px;
+  height: 600px;
+  margin: 3;
+  background-color:#eeeded;
+  float: left;
+  position: absolute;
+}
+
+#rightDiv {
+  width: 1000px;
+  height: 1000px;
+  margin: 3;
+  background-color:#eeeded;
+  display: inline-block;
+  text-align:center;
 }
 
 #map {
-    width: 60%;
-    height: 60%;
-    margin: 0 auto;
+  width: 60%;
+  height: 60%;
+  margin: 0 auto;
 }
 
+
 .button {
-    background-color: #4CAF50;
+    background-color: #44c994;
     border: none;
     color: white;
     padding: 15px 32px;
@@ -55,9 +67,6 @@ html, body {
   border: none;
   cursor: pointer;
 }
- #cssmenu {
-        text-align:center;
- }
 
 .dropdown {
   position: relative;
@@ -88,4 +97,29 @@ html, body {
 
 .dropdown:hover .dropbtn {
   background-color: #3e8e41;
+}
+
+.legend {
+  line-height: 18px;
+  color: #555;
+}
+.legend i {
+  width: 18px;
+  height: 18px;
+  float: left;
+  margin-right: 8px;
+  opacity: 0.7;
+}
+
+#footerContainer {
+  clear: both; 
+  margin-top: 190px; 
+  z-index: 1; 
+  width: 100%; 
+  background: #323232;
+}
+
+.footer {
+padding: 10px;
+color: #fefefe;
 }

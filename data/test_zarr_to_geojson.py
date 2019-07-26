@@ -141,9 +141,9 @@ def get_decompressed_arrays(dataset, depthIdx=0, timeIdx=0):
     # azure zarr-blob object
     absstore_obj = get_blob_client(dataset['blobpath'])
 
+   
 
-
-    '''
+  
     import xarray as xr
     #print(absstore_obj())
     #absstore_object['salinity']
@@ -156,25 +156,35 @@ def get_decompressed_arrays(dataset, depthIdx=0, timeIdx=0):
         print(f"{dataset['measurementtype']} max: {max}")
 
     exit()
-    '''
 
+  
+    
     import xarray as xr
+    import blosc
 
     CONTAINER_NAME  = 'zarr'
     ACCOUNT_NAME    = 'stratos'
     ACCOUNT_KEY     = 'A7nrOYKyq6y2GLlprXc6tmd+olu50blx4sPjdH1slTasiNl8jpVuy+V0UBWFNmwgVFSHMGP2/kmzahXcQlh+Vg=='
 
-    franfjord = zarr.storage.ABSStore(CONTAINER_NAME, "Franfjorden32m/samples_NSEW_2013.03.11_chunked-time&depth.zarr", ACCOUNT_NAME, ACCOUNT_KEY)
-    norsok = zarr.storage.ABSStore(CONTAINER_NAME, "norsok/samples_NSEW.nc_201301_nc4.zarr", ACCOUNT_NAME, ACCOUNT_KEY)
+    absstore_obj = zarr.storage.ABSStore(CONTAINER_NAME, "norsok/samples_NSEW.nc_201301_nc4.zarr", ACCOUNT_NAME, ACCOUNT_KEY)
 
+
+    decom_meas = blosc.decompress(absstore_obj['salinity/0.0.0.0'])
+    measurements = np.frombuffer(decom_meas, "<i2").reshape((635, 1019))
+
+    measurements=measurements[measurements>-20000]
+    measurements=measurements[measurements<-9500]
+    print(float(measurements.min()))
+    print(measurements.max())
+    exit()
     #absstore_object['salinity']
     with xr.open_zarr(franfjord) as franfjord_ds:
         with xr.open_zarr(norsok) as norsok_ds:
-            print(float(franfjord_ds['salinity'][0,0,0,0]))
-            print(float(norsok_ds['salinity'][0,0,220,20]))
+            print(float(franfjord_ds['temperature'][0,220,0,0]))
+            print(float(norsok_ds['temperature'][0,0,220,20]))
  
     
-    exit()
+    
 
 
 
@@ -217,7 +227,6 @@ def get_decompressed_arrays(dataset, depthIdx=0, timeIdx=0):
 
     # create numpy arrays from the decompressed buffers and give it our grid shape
     section_start = time.time()
-    print(meas_datatype)
     lats = np.frombuffer(decom_lats, dtype=coord_datatype).reshape(meas_shape)
     lons = np.frombuffer(decom_lons, dtype=coord_datatype).reshape(meas_shape)
     measurements = np.array(np.frombuffer(decom_meas, dtype=meas_datatype).reshape(meas_shape))
@@ -325,14 +334,18 @@ def zarr_to_geojson(startEdge=(0,0),
 # TODO: Keep this for quick-testing of both algorithm and execution time..
 
 #dataset={'blobpath':'Franfjorden32m/samples_NSEW_2013.03.11_chunked-time&depth.zarr', 'measurementtype':'temperature'}
-dataset={'blobpath':'norsok/samples_NSEW.nc_201301_nc4.zarr', 'measurementtype':'salinity'}
+dataset={'blobpath':'norsok/samples_NSEW.nc_201301_nc4.zarr', 'measurementtype':'w_north'}
 #dataset={'blobpath':'norsok', 'measurementtype':'temperature'}
+#dataset={'blobpath':'OSCAR/TEST3MEMWX.XNordlandVI_concentration.zarr', 'measurementtype':'total_concentration'}
+#dataset={'blobpath':'OSCAR/TEST3MEMWX.XNordlandVI_surface.zarr', 'measurementtype':'surface_avg_asphaltene_fraction_distribution_by_thickness'}
+
+ 
 
 N = 1
 start = time.time()
 for i in range(N):
     zarr_to_geojson(nGrids=200, 
-                        depthIdx=0,
+                        depthIdx=20,
                         timeIdx=0,
                         dataset=dataset)
 end = time.time()
