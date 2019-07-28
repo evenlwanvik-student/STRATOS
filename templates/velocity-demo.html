@@ -7,20 +7,36 @@
 </head>
 <body>
 
-<div id="map"></div>
+	<div style="align-content: left;">
+		<div>
+			<label>Dataset:</label>
+			<select id="datasetMenu" name="dataset" type="text" onchange="populateDatatypeMenu()">
+				<option value="" diabled>-- Select --</option>
+			</select>
+		</div>
+		<div>
+			<label>Datatype:</label>
+			<select id="datatypeMenu" name="datatype" type="text">
+			<option selected="true" value="" disabled>-- Select --</option>
+			</select>
+		</div>
+	</div>
+	<div id="left-div">
+			<div id="map" style="align-content: right;"> </div>
+	</div>
 
-<!--vendor-->
-<script src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
-<link rel="stylesheet" href="https://npmcdn.com/leaflet@1.1.0/dist/leaflet.css" />
-<script type="text/javascript" src="https://npmcdn.com/leaflet@1.1.0/dist/leaflet.js"></script>
+	<!--vendor-->
+	<script src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
+	<link rel="stylesheet" href="https://npmcdn.com/leaflet@1.1.0/dist/leaflet.css" />
+	<script type="text/javascript" src="https://npmcdn.com/leaflet@1.1.0/dist/leaflet.js"></script>
 
-<!--leaflet-velocity-->
-<link rel="stylesheet" href="../static/leaflet-velocity/leaflet-velocity.css" />
-<script type="text/javascript" src="../static/leaflet-velocity/leaflet-velocity.js"></script>
+	<!--leaflet-velocity-->
+	<link rel="stylesheet" href="../static/leaflet-velocity/leaflet-velocity.css" />
+	<script type="text/javascript" src="../static/leaflet-velocity/leaflet-velocity.js"></script>
 
-<!--demo-->
-<link rel="stylesheet" href="../static/leaflet-velocity/velocity-demo.css" />
-<script type="text/javascript" src="../static/leaflet-velocity/velocity-demo.js"></script>
+	<!--demo-->
+	<link rel="stylesheet" href="../static/leaflet-velocity/velocity-demo.css" />
+	<script type="text/javascript" src="../static/leaflet-velocity/velocity-demo.js"></script>
 
 </body>
 </html>

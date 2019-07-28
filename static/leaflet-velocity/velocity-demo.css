@@ -13,9 +13,34 @@ a {
     color: #2d78e0;
 }
 
-#map {
+#leftDiv {
+    width: 200px;
+    height: 600px;
+    margin: 3;
+    background-color:#eeeded;
+    float: left;
     position: absolute;
-    height: 100%;
+}
+  
+#rightDiv {
+    width: 1000px;
+    height: 1000px;
+    margin: 3;
+    background-color:#eeeded;
+    display: inline-block;
+    text-align:center;
+}
+
+#map {
+    
+    height:1000px;
+    width:1000px;
+    background-color: rgb(53, 53, 53);
+}
+
+#data-selection {
+    position: absolute;
+    height: 400px;
     width: 100%;
     background-color: rgb(53, 53, 53);
 }

@@ -49,7 +49,7 @@ var map = mapStuff.map;
 var layerControl = mapStuff.layerControl;
 
 // load data (u, v grids)
-$.getJSON("static/leaflet-velocity/u-east.json", function(data) {
+$.getJSON("static/leaflet-velocity/u-east.json", function(flask_response) {
   console.log("here");
   var velocityLayer = L.velocityLayer({
     displayValues: true,
@@ -58,7 +58,7 @@ $.getJSON("static/leaflet-velocity/u-east.json", function(data) {
       displayPosition: "bottomleft",
       displayEmptyString: "No wind data"
     },
-    data: data,
+    data: flask_response,
     maxVelocity: 10
   });
   // add possibility to add the layer to map
