@@ -147,29 +147,6 @@ $(function() {
     });
   });
 
-/* render the velocity vector usin leaflet plugin */ 
-function showVelocityVector() {
-  $.getJSON('/getVelocityVector', 
-    {
-      blobpath: $('select[name="dataset"]').val(),
-      datatype: $('select[name="datatype"]').val()
-    },
-    function(flask_response) 
-    {
-      var velocityLayer = L.velocityLayer({
-        displayValues: true,
-        displayOptions: {
-          velocityType: "norsok wind?",
-          displayPosition: "bottomleft",
-          displayEmptyString: "No wind data"
-        },
-        data: flask_response,
-        maxVelocity: 10
-      });
-      console.log("test")
-    });
-}
-
 
 var depthLayerArray = new Array(20);
  // Depth series with ajax/jQuery

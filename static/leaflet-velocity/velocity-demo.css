@@ -1,0 +1,25 @@
+body {
+    margin: 0px;
+}
+
+#heading {
+    text-align: center;
+    padding: 25px;
+    background: rgb(53, 53, 53);
+    color: #CCC;
+}
+
+a {
+    color: #2d78e0;
+}
+
+#map {
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    background-color: rgb(53, 53, 53);
+}
+
+.leaflet-canvas-layer {
+    opacity: 0.50;
+}

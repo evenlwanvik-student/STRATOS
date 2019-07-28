@@ -7,15 +7,16 @@ import json
 import sys
 import logging
 
-# from data.zarr_to_geojson import zarr_to_geojson
-# from data.zarr_to_topo import zarr_to_topo
-# from data.get_cloud_json import get_json_blob
-
-# If running outside container use this instead:
 from data.zarr_to_geojson import zarr_to_geojson
 from data.zarr_to_topo import zarr_to_topo
-from data.get_cloud_json import get_json_blob
+#from data.get_cloud_json import get_json_blob
 from data.zarr_to_velocity import zarr_to_velocity
+
+# If running outside container use this instead:
+#from data.zarr_to_geojson import z#arr_to_geojson
+#from data.zarr_to_topo import zarr_to_topo
+#from data.get_cloud_json import get_json_blob
+#from data.zarr_to_velocity import zarr_to_velocity
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
@@ -130,7 +131,8 @@ def getVelocityVector():
                     'measurementtype': request.args.get('datatype', "temperature", type=str)}
  
     logging.warning(f'trying to generate a velocity vector object for {dataset_dict}')
-    return jsonify(json=zarr_to_velocity())
+    return render_template("velocity-demo.html")
+    #return jsonify(json=zarr_to_velocity())
 
 
 if __name__ == '__main__':

@@ -202,6 +202,8 @@ def zarr_to_geojson(startNode=(0,0),
     # download z-arrays from azure cloud and decompress requested chunks
     [lons, lats, measurements, fill_value, coord_dims] = get_decompressed_arrays(dataset, timeIdx=timeIdx, depthIdx=depthIdx)
 
+    print(measurement_type)
+
     logging.warning(f"configured range for {measurement_type}: "
                         f"{config.color_enc[dataset_name][measurement_type]['min']} to "
                         f"{config.color_enc[dataset_name][measurement_type]['max']}")
