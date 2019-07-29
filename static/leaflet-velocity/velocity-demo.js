@@ -50,7 +50,6 @@ var layerControl = mapStuff.layerControl;
 
 // load data (u, v grids)
 $.getJSON("static/leaflet-velocity/u-east.json", function(flask_response) {
-  console.log("here");
   var velocityLayer = L.velocityLayer({
     displayValues: true,
     displayOptions: {

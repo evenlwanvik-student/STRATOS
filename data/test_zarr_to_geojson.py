@@ -334,7 +334,7 @@ def zarr_to_geojson(startEdge=(0,0),
 # TODO: Keep this for quick-testing of both algorithm and execution time..
 
 #dataset={'blobpath':'Franfjorden32m/samples_NSEW_2013.03.11_chunked-time&depth.zarr', 'measurementtype':'temperature'}
-dataset={'blobpath':'norsok/samples_NSEW.nc_201301_nc4.zarr', 'measurementtype':'w_north'}
+dataset={'blobpath':'norsok/samples_NSEW.nc_201301_nc4.zarr', 'measurementtype':'v_north'}
 #dataset={'blobpath':'norsok', 'measurementtype':'temperature'}
 #dataset={'blobpath':'OSCAR/TEST3MEMWX.XNordlandVI_concentration.zarr', 'measurementtype':'total_concentration'}
 #dataset={'blobpath':'OSCAR/TEST3MEMWX.XNordlandVI_surface.zarr', 'measurementtype':'surface_avg_asphaltene_fraction_distribution_by_thickness'}

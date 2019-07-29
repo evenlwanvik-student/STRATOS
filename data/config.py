@@ -21,10 +21,13 @@ color_enc = {
             "max": 36
         },
         "u_east": {
-            "min": -2,
-            "max": 2
-        }, 
-        "v_north": "", 
+            "min": -6,
+            "max": 6
+        },
+        "v_north": {
+            "min": -6,
+            "max": 6
+        }
         "w_east": "", 
         "w_north": "-10",
         "w_velocity": ""
