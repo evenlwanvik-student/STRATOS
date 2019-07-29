@@ -201,8 +201,19 @@ def zarr_to_velocity(depthIdx=0,
     data[1]['header']["la1"] = lats[0,0]
     data[1]['header']["la2"] = lats[xgrids-1,ygrids-1]
     data[1]['header']["lo1"] = lons[0,0]
-    data[1]['header']["lo2"] = lons[xgrids-1,ygrids-1]
+    data[1]['header']["lo2"] = lons[xgrids-1,0]
 
+    '''
+    print(lats.min())
+    print(lons.min())
+    print(data[1]['header']["la1"])
+    print(data[1]['header']["la2"])
+    print(data[1]['header']["lo1"])
+    print(data[1]['header']["lo2"])
+    print(xgrids)
+    print(ygrids)
+    '''
+    
     # xy resolution = 32m
     data[1]['header']["dx"] = lats[0,0]-lats[1,1]
     data[1]['header']["dy"] = lons[0,0]-lons[1,1]
@@ -219,4 +230,4 @@ def zarr_to_velocity(depthIdx=0,
 
     return json.dumps(data, cls=JsonEncoder)
 
-#zarr_to_velocity()
+zarr_to_velocity()
