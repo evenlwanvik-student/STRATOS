@@ -5,31 +5,42 @@ fill_values = (np.nan, -32768, 3.0000000054977558e+38)
 
 color_enc = {
     "_comment": "holds the range for each measurement type and is used to create the colormap. The ranges were found by min/max operations on the whole 3 to 4-D array.",
-    "hexa_range": {
+    "oscar_range": {
         "_comment": "hot to cold color encoding and the resolution (nColors)",
         "hot": "#ffff2d",
         "cold": "#ef3c42",
         "nColors": 100
     },
+    "temperature_range":{
+        "hot": "#5cfdd0",
+        "cold": "#0024d8",
+        "nColors": 100
+    },
     "Franfjorden32m": {
         "temperature": {
-            "min": 268,
-            "max": 295      
+            "min": 273,
+            "max": 285      
         },
         "salinity": {
             "min": 14,
             "max": 36
         },
         "u_east": {
-            "min": -6,
-            "max": 6
+            "min": -2,
+            "max": 2
         },
         "v_north": {
             "min": -6,
             "max": 6
-        }
-        "w_east": "", 
-        "w_north": "-10",
+        },
+        "w_east": {
+            "min": -6,
+            "max": 6
+        }, 
+        "w_north": {
+            "min": -6,
+            "max": 6
+        },
         "w_velocity": ""
     },
     "norsok": {
@@ -39,15 +50,28 @@ color_enc = {
         },
 
         "salinity": {
-            "min": -25000,
-            "max": -9000
+            #"min": -25000,
+            #"max": -9000
+            "min": -11200,
+            "max": -9500
+
         },
-
-
-        "u_east": "", 
-        "v_north": "",  
-        "w_east": "", 
-        "w_north": "",
+        "u_east": {
+            "min": -2,
+            "max": 2
+        },
+        "v_north": {
+            "min": -6,
+            "max": 6
+        },
+        "w_east": {
+            "min": -6,
+            "max": 6
+        }, 
+        "w_north": {
+            "min": -6,
+            "max": 6
+        },
         "w_velocity": ""
     },
     "OSCAR": {

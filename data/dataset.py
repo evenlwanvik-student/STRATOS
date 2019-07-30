@@ -41,7 +41,7 @@ class data_instance():
             self.lons = xr_data['gridLons']
 
 
-        ''' tried to set the measurement range for the colormap, but then we have to 
+        ''' We tried to set the measurement range for the colormap, but then we have to 
         read the whole array and it's not worth it, as we are working with references
         until someone actually wants to access the data, which we do in azure_to_json
         when we know what subset of data we want.

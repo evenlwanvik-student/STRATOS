@@ -9,8 +9,8 @@ import zarr
 import sys
 import logging
 import warnings
-from data.color_encoding import temp_to_rgb
-#from .color_encoding import temp_to_rgb
+#from data.color_encoding import temp_to_rgb
+from .color_encoding import temp_to_rgb
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
@@ -88,8 +88,9 @@ def get_decompressed_arrays(dataset, depthIdx=0, timeIdx=0):
 
     return([lons, lats, measurements, meas_metadata['fill_value']])
 
-# Function used mainly for inspection the output when testing
+
 def write_output(data):
+    '''Function used mainly for inspection the output when testing'''
     # Path outside container
     #output_path = "C:/Users/marias/Documents/Git/stratos/data/outputs/written_topojson.json"
     
@@ -245,30 +246,3 @@ def zarr_to_topo(startNode=(0,0),
     end = time.time()
     logging.warning("total execution time of zarr_to_topo function: %f",end-start)
     return json.dumps(jsonData, cls=JsonEncoder)
-
-'''
-    start_write = time.time() 
-    write_output(json.dumps(jsonData, indent=4, cls=JsonEncoder))
-    end = time.time()
-    logging.warning("time spent writing to file: %f",end-start_write)
-'''
-
-
-# TODO: Keep this for quick-testing of both algorithm and execution time..
-'''
-zarr_to_topo(nGrids=250)
-
-dataset={'dataset':'nordfjord32m', 'type':'temperature'}
-#dataset={'dataset':'nordfjord32m', 'type':'salinity'}
-#dataset={'dataset':'norsok', 'type':'temperature'}
-
-N = 10
-start = time.time()
-for i in range(N):
-    zarr_to_geojson(nGrids=250, 
-                        depthIdx=0,
-                        timeIdx=0,
-                        dataset=dataset)
-end = time.time()
-logging.warning("average execution time: %f", (end-start)/N)
-'''

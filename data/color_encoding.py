@@ -6,8 +6,9 @@ from copy import deepcopy
 import logging
 
 import config
+#from .. import config
 
-#-------------- initializations --------------
+#-------------- initialization --------------
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
@@ -43,10 +44,15 @@ def rgb_spectrum():
         inlcuding the number sign ("#FFFFFF") '''
     # Starting and ending colors in RGB form
     # start (s) and finish (f) hexa range for color map
-    s = hex_to_RGB(config.color_enc['hexa_range']['hot'])
-    f = hex_to_RGB(config.color_enc['hexa_range']['cold'])
-    n = config.color_enc['hexa_range']['nColors']
-    # Initilize a list of the output colors with the starting color
+    if color_range == 'temperature_range':
+        s = hex_to_RGB(config.color_enc['temperature_range']['hot'])
+        f = hex_to_RGB(config.color_enc['temperature_range']['cold'])
+        n = config.color_enc['temperature_range']['nColors']
+    else:
+        s = hex_to_RGB(config.color_enc['oscar_range']['hot'])
+        f = hex_to_RGB(config.color_enc['oscar_range']['cold'])
+        n = config.color_enc['oscar_range']['nColors']
+    # Initialize a list of the output colors with the starting color
     RGB_list = [s]
     # Calcuate a color at each evenly spaced value of t from 1 to n
     for t in range(1, n):
@@ -62,7 +68,7 @@ def rgb_spectrum():
 def temp_to_rgb(val, val_type, dataset):
     ''' performs a conversion of the input temperature in kelvin to a six-digit 
     rgb color string. The range is fetched from config.json, value is saturated if outside
-    of range. The warning should be an indicator of that the range should be increased
+    of range. The warning should be an indicator of that the range should be adjusted
     
     Parameters
     ----------
@@ -84,8 +90,14 @@ def temp_to_rgb(val, val_type, dataset):
         else:               val = val_max 
 
     # start (s) and finish (f) hexa range for color map
-    s = hex_to_RGB(config.color_enc['hexa_range']['hot'])
-    f = hex_to_RGB(config.color_enc['hexa_range']['cold'])
+    if val_type == 'temperature':
+        s = hex_to_RGB(config.color_enc['temperature_range']['hot'])
+        f = hex_to_RGB(config.color_enc['temperature_range']['cold'])
+        n = config.color_enc['temperature_range']['nColors']
+    else:
+        s = hex_to_RGB(config.color_enc['oscar_range']['hot'])
+        f = hex_to_RGB(config.color_enc['oscar_range']['cold'])
+        n = config.color_enc['oscar_range']['nColors']
 
     # 0-100% for using RGB conversion algorithm
     val_percent = (float(val-val_min)/(val_max-val_min))*100
@@ -97,7 +109,6 @@ def temp_to_rgb(val, val_type, dataset):
 
 
 #-------------- plotting colorspectrum --------------
-
 
 def colormap(rgb): 
     ''' takes a list of rgb tuples and plots a color map '''

@@ -10,8 +10,10 @@ import logging
 import warnings
 
 #from .color_encoding import temp_to_rgb
+#from .. import config
 from data.color_encoding import temp_to_rgb
 import config
+
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
@@ -202,8 +204,6 @@ def zarr_to_geojson(startNode=(0,0),
     # download z-arrays from azure cloud and decompress requested chunks
     [lons, lats, measurements, fill_value, coord_dims] = get_decompressed_arrays(dataset, timeIdx=timeIdx, depthIdx=depthIdx)
 
-    print(measurement_type)
-
     logging.warning(f"configured range for {measurement_type}: "
                         f"{config.color_enc[dataset_name][measurement_type]['min']} to "
                         f"{config.color_enc[dataset_name][measurement_type]['max']}")
@@ -213,8 +213,8 @@ def zarr_to_geojson(startNode=(0,0),
     geojson_start = time.time()
     for y in range(nGrids):                 
         for x in range(nGrids):   
-            edge = (startNode[0]+y, startNode[1]+x)  
-            measurement = measurements[edge]
+            node = (startNode[0]+y, startNode[1]+x)  
+            measurement = measurements[node]
             # if current square is fill value: skip grid -> else: insert lat/lon and temp into data
             if measurement in config.fill_values:
                 continue
@@ -231,31 +231,23 @@ def zarr_to_geojson(startNode=(0,0),
                 # rounding from 16 (64bit) to 4 decimals, convert to string for json serialization
                 counter_start = time.time() 
                 # if lat/lon is a 2d array (grid coordinates)
+                
                 if coord_dims==2:
                     feature['geometry']['coordinates'].append( [
-                        [round(lats[y,x],4), round(lons[y,x],4)],
-                        [round(lats[y,x+1],4), round(lons[y,x+1],4)],
-                        [round(lats[y+1,x+1],4), round(lons[y+1,x+1],4)],
-                        [round(lats[y+1,x],4), round(lons[y+1,x],4)],
-                        [round(lats[y,x],4), round(lons[y,x],4)]
+                        [round(lats[node],4), round(lons[node],4)],
+                        [round(lats[node[0],node[1]+1],4), round(lons[node[0],node[1]+1],4)],
+                        [round(lats[node[0]+1,node[1]+1],4), round(lons[node[0]+1,node[1]+1],4)],
+                        [round(lats[node[0]+1,node[1]],4), round(lons[node[0]+1,node[1]],4)],
+                        [round(lats[node[0],node[1]],4), round(lons[node[0],node[1]],4)]
                     ])
                 else:
                     feature['geometry']['coordinates'].append( [
-                        [round(lats[y],4), round(lons[x],4)],
-                        [round(lats[y],4), round(lons[x+1],4)],
-                        [round(lats[y+1],4), round(lons[x+1],4)],
-                        [round(lats[y+1],4), round(lons[x],4)],
-                        [round(lats[y],4), round(lons[x],4)]
+                        [round(lats[node[0]],4), round(lons[node[1]],4)],
+                        [round(lats[node[0]],4), round(lons[node[1]+1],4)],
+                        [round(lats[node[0]+1],4), round(lons[node[1]+1],4)],
+                        [round(lats[node[0]+1],4), round(lons[node[1]],4)],
+                        [round(lats[node[0]],4), round(lons[node[1]],4)]
                     ])
-                '''
-                feature['geometry']['coordinates'].append( [
-                    [round(lats[startNode[0]+y,startNode[1]+x],4),round(lons[startNode[0]+y,startNode[1]+x],4)],
-                    [round(lats[startNode[0]+y,startNode[1]+x+1],4),round(lons[startNode[0]+y,startNode[1]+x+1],4)],
-                    [round(lats[startNode[0]+y+1,startNode[1]+x+1],4),round(lons[startNode[0]+y+1,startNode[1]+x+1],4)],
-                    [round(lats[startNode[0]+y+1,startNode[1]+x],4),round(lons[startNode[0]+y+1,startNode[1]+x],4)],
-                    [round(lats[startNode[0]+y,startNode[1]+x],4),round(lons[startNode[0]+y,startNode[1]+x],4)]
-                ])
-                '''
                 featureIdx = featureIdx + 1
     end =time.time
     logging.warning("number of generated polygons: %d", len(jsonData['features']))
@@ -266,13 +258,6 @@ def zarr_to_geojson(startNode=(0,0),
     logging.warning("total execution time of azure to json function: %f",end-start)
     
     return json.dumps(jsonData, cls=JsonEncoder)
-
-    '''
-    start_write = time.time() 
-    write_output(json.dumps(jsonData, cls=JsonEncoder))
-    end = time.time()
-    logging.warning("time spent writing to file: %f",end-start_write)
-    '''
 
     
 

@@ -15,7 +15,7 @@ a {
 
 #leftDiv {
     width: 200px;
-    height: 600px;
+    height: 400px;
     margin: 3;
     background-color:#eeeded;
     float: left;
@@ -32,9 +32,9 @@ a {
 }
 
 #map {
-    
-    height:1000px;
-    width:1000px;
+    width: 1000px;
+    height: 1000px;
+    margin: 0 auto;
     background-color: rgb(53, 53, 53);
 }
 

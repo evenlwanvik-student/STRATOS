@@ -1,38 +1,64 @@
-// Display map
+// Displaying map initially
 var latitude = document.getElementById("lat").innerHTML;
 var longitude = document.getElementById("long").innerHTML;
 var zoom = document.getElementById("zoom").innerHTML;
 var map = L.map('map').setView([latitude, longitude], zoom);
 L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
 
+// Creating legends for demo purposes
+// NOTE: these are not customized to fit all the different types of data
+var temp_legend = L.control({position: 'bottomright'});
+var oscar_legend = L.control({position: 'bottomright'});
 
-// Adding legend to map
-var legend = L.control({position: 'bottomright'});
-
-legend.onAdd = function (map) {
+temp_legend.onAdd = function (map) {
     var div = L.DomUtil.create('div', 'info legend'),
-    grades = [0, 1, 2, 3],
+    grades = [0, 5, 10, 15, 20],
     labels = [];
     var degrees = 1;
     // loop through our density intervals and generate a label with a colored square for each interval
     for (var i = 0; i < grades.length; i++) {
-        div.innerHTML +=
-            '<i style="background:' + getColor(grades[i] + 1) + '"></i> ' +
-            degrees + grades[i] + '<br>';
-}
-
-return div;
+      div.innerHTML +=
+          '<i style="background:' + getTemperatureColor(grades[i] + 1) + '"></i> ' +
+          grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '+');
+  }
+  return div;
 };
 
-legend.addTo(map);
-
-function getColor(d) {
-  return d > 3   ? '#0779f2' :
-         d > 2   ? '#24aeed' :
-         d > 1   ? '#5ec7f7' :
-                    '#87e1fa';
+function getTemperatureColor(d) {
+  return d > 20   ? '#5cfdd0' :
+         d > 15   ? '#5cf1fd' :
+         d > 10   ? '#58b4f6' :
+         d > 5    ? '#3b9ee5' :
+                    '#1686d6' ;
 }
 
+oscar_legend.onAdd =  function (map) {
+  var div = L.DomUtil.create('div', 'info legend'),
+      grades = [0, 10, 20, 50, 100, 200, 500, 1000],
+      labels = [];
+  for (var i = 0; i < grades.length; i++) {
+      div.innerHTML +=
+          '<i style="background:' + getOscarColor(grades[i] + 1) + '"></i> ' +
+          grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '+');
+  }
+  return div;
+};
+
+function getOscarColor(d) {
+  return d > 1000 ? '#800026' :
+         d > 500  ? '#BD0026' :
+         d > 200  ? '#E31A1C' :
+         d > 100  ? '#FC4E2A' :
+         d > 50   ? '#FD8D3C' :
+         d > 20   ? '#FEB24C' :
+         d > 10   ? '#FED976' :
+                    '#FFEDA0';
+}
+
+// Function that toggles the input field for the pregenereated topoJSON
+$("#norsok").bind('click', function() {
+  $("#preMade").toggle();
+});
 
 function loadJSON() {
   // create XRMLHttpRequest instance
@@ -42,11 +68,11 @@ function loadJSON() {
   datasets.onreadystatechange = func
 }
 
-
-/* Populates the drop-down menu for selecting dataset, names and values are held in datasets.json */ 
+// Populates the drop-down menu for selecting dataset
+// names and values are held in datasets.json
 function populateDatasetMenu() {
   let dsMenu = $('#datasetMenu');
-  // empty dropdown, then initialize and opulate dropdown with dataset names
+  // empty dropdown, then initialize and fill the dropdown with dataset names
   dsMenu.empty();
   dsMenu.append('<option selected="true" value="norsok" disabled>-- Select --</option>');
   dsMenu.prop('selectedIndex', 0);
@@ -59,9 +85,9 @@ function populateDatasetMenu() {
 }
 
 // blobpath is for holding the full path to the blob of the model, e.g. OSCAR/TEST3MEMWX.XNordlandVI_evap.zarr
-var blobpath = ""
-/* Populates the drop-down menu for selecting datatype, names and values are held in datasets.json. 
-The content of the menu depends on the chosen dataset */
+var blobpath = "";
+// Populates the drop-down menu for selecting datatype
+// The content of the menu depends on the chosen dataset
 function populateDatatypeMenu() {
   // get name of current dataset
   var dsMenu = document.getElementById("datasetMenu");
@@ -79,51 +105,21 @@ function populateDatatypeMenu() {
   });
 }
 
-
-// Loading topoJSON to Leaflet map
-
-// Loading topoJSON to Leaflet map
+// Function to add selfmade topoJSON to Leaflet map
+// Currently not in use
 function loadTOPO(){
   map.setView([62.828181, 7.130122], 12);
-   $.getJSON('/makeTopo')
-   .done(addTopoData);
+  temp_legend.addTo(map);
+  $.getJSON('/makeTopo')
+  .done(addTopoData);
 }
 
 function addTopoData(topoData) {
   var geojsonLayer = new L.GeoJSON(topojson.feature(topoData, topoData.objects),{style: polystyle}).addTo(map);
+  temp_legend.addTo(map);
   /*  topojson.feature(topology, object) <> translates a topojson-object to a geojson-object.
       It returns a FeatureCollection if the object is of type GeometryCollection and maps each Geometry to a Feature
-      The returned feature is a shallow copy of the source object: they may share identifiers, bounding boxes, properties and coordinates. */
-}
-
-function addPreMadeTopo(topoData) {
-  var geojsonLayer = new L.GeoJSON(topojson.feature(topoData, topoData.objects.written_geojson),{style: polystyle}).addTo(map);
-}
-
-//Loading GeoJSON for testing
-function loadGEO(){
-  map.setView([62.828181, 7.130122], 12);
-  $.getJSON('/getGeo')
-  .done(addGeoData);
-}
-
-function loadPreMadeJSON(jsonType){
-  map.setView([62.828181, 7.130122], 12);
-  $.getJSON('/preMadeJSON',
-    {
-    blob_name: jsonType
-    },
-    function(flask_response){
-      if (flask_response.blob == 'written_geojson.json'){
-        addGeoData(JSON.parse(flask_response.json))
-      } else {
-        addPreMadeTopo(JSON.parse(flask_response.json))
-      }
-    });
-}
-
-function addGeoData(GeoData) {  
-  new L.GeoJSON(GeoData, {style: polystyle}).addTo(map);
+  */
 }
 
 // Reloading geojson with input fields, getting new geojson with ajax, fixing html with jQuery
@@ -134,6 +130,8 @@ $(function() {
                   blobpath: $('select[name="dataset"]').val(),
                   datatype: $('select[name="datatype"]').val(),
                   gridcells: $('input[name="gridcells"]').val(),
+                  lat_idx: $('input[name="lat_idx"]').val(),
+                  long_idx: $('input[name="long_idx"]').val(),
                   depth: $('input[name="depth"]').val(), 
                   time: $('input[name="time"]').val() 
                 },
@@ -142,14 +140,79 @@ $(function() {
                     map.setView([flask_response.lat, flask_response.lon], 
                                 flask_response.zoom);
                     new L.GeoJSON(JSON.parse(flask_response.geojson),{style: polystyle}).addTo(map);
+                    temp_legend.addTo(map);
                 });
       return false;
     });
+});
+
+// Function to get pregenerated salinity NORSOK topojson data
+$(function() {
+  $('#reloadPremade').bind('click', function() {
+    map.setView([59.973424, 5.567064], 7);
+    $.getJSON('/preMadeJSON', 
+              {
+                depth: $('input[name="depth2"]').val()
+              },
+              function(flask_response) 
+              {
+                new L.GeoJSON(topojson.feature(flask_response, flask_response.objects.geojson),{style: polystyle}).addTo(map);
+                oscar_legend.addTo(map);
+              });
+    return false;
   });
+});
 
 
-var depthLayerArray = new Array(20);
- // Depth series with ajax/jQuery
+// Timelapse of OSCAR data
+var timelapseArray = new Array(100);
+
+$(function() {
+  $('#timelapse').bind('click', function() {
+    map.setView([68.014998, 12.075042], 7);
+    var timeIndex; 
+    for (timeIndex = 0; timeIndex <7; timeIndex+=3){  //request first two
+      $.getJSON('/timelapse', {
+          time: timeIndex,
+          blobpath: 'OSCAR/TEST3MEMWX.XNordlandVI_surface.zarr',
+          datatype: 'water_content'
+        }, function(flask_response) {
+          // organize geojson layers in array
+            timelapseArray[(flask_response.timeIdx)/3]=new L.GeoJSON(JSON.parse(flask_response.geojson), {style: polystyle})
+            oscar_legend.addTo(map);
+        });
+    }
+    return false;
+  });
+});
+
+window.setInterval(drawTimelapse, 100); // calls drawTimelapse every 100 millisecond
+timeIndex = 0;
+function drawTimelapse(){
+  if (timelapseArray[timeIndex/3] == null){   
+    return;                                      
+  } // only moves past this point if the next layer to be displayed has been returned from flask
+  if (timeIndex!=0){
+    timelapseArray[(timeIndex/3)-1].clearLayers(); //removes old layer from map
+  }
+  timelapseArray[timeIndex/3].addTo(map); // adds new layer from current timestep
+  timeIndex = timeIndex + 3;
+  
+  if (timeIndex < 301){
+    $.getJSON('/timelapse', {   //requests next layer
+      time: timeIndex,
+      blobpath: 'OSCAR/TEST3MEMWX.XNordlandVI_surface.zarr',
+      datatype: 'water_content'
+    }, function(flask_response) {
+      // puts geojson layer in array
+      timelapseArray[(flask_response.timeIdx)/3]=new L.geoJSON(JSON.parse(flask_response.geojson), {style: polystyle})
+    });
+  }
+}
+
+ // Depth series Frænfjorden with ajax/jQuery
+ // Not used currently
+ var depthLayerArray = new Array(20);
  $(function() {
   $('#depthseries').bind('click', function() {
     map.setView([62.828181, 7.130122], 13);
@@ -160,6 +223,7 @@ var depthLayerArray = new Array(20);
         }, function(flask_response) {
           // organize geojson layers in array
             depthLayerArray[flask_response.depthIdx]=new L.GeoJSON(JSON.parse(flask_response.geojson), {style: polystyle})
+            temp_legend.addTo(map);
         });
     }
     return false;
@@ -188,7 +252,7 @@ function drawDepthLayer(){
   }
 }
 
-// Function to style the grid accoring to each geojson feature data
+// Function to style the gridcells
 function polystyle(feature) {
     return {
         "color" : feature.properties.fill,

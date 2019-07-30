@@ -1,0 +1,8 @@
+{
+  "type":"Topology",
+  "objects":{ 
+    "type": "GeometryCollection",
+    "geometries": []
+    },
+  "arcs": []
+}

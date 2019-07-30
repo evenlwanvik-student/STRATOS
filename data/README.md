@@ -14,7 +14,7 @@ This version sucessfully initialized a local netcdf as a [xarray](http://xarray.
 ###### 2.1.1 Generating geojson polygons
 Takes latitudes, longitudes and the edge from which to start transversing the grid plane as input args. It returns a list which will be written to the ```"features": "geometry": "coordiniates": [[]]```:  dictionary which was in beforehand appended to the output object. To create the polygon it iterates in both y and x direction, but has to reverse the inner loop on the second outer loop iteration, as it has to traverse in a square shape and return back to its original position.
 ```python
-geojson_grid_coord(lats, lons, startEdge):
+geojson_grid_coord(lats, lons, startNode):
     ...
     return [[lat,lon],[lat, ...] ...]
 ```

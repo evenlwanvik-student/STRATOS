@@ -82,6 +82,7 @@ def get_decompressed_arrays(blobpath, measurementtype, depthIdx=0, timeIdx=0):
 
     section_start = time.time()
     # insert conditional check for time, depth and possible other dimensions..
+    # to implement the time and depth indeces, have a look at how it's done in zarr_to_geojson.py
     decom_meas = zarr.blosc.decompress(absstore_obj[f'{measurementtype}/{meas_chunks}'])
     decom_lats = zarr.blosc.decompress(absstore_obj[f'{latalias}/{coord_chunks}'])
     decom_lons = zarr.blosc.decompress(absstore_obj[f'{lonalias}/{coord_chunks}'])
@@ -93,21 +94,23 @@ def get_decompressed_arrays(blobpath, measurementtype, depthIdx=0, timeIdx=0):
     lats = np.frombuffer(decom_lats, dtype=coord_datatype).reshape(lat_shape)
     lons = np.frombuffer(decom_lons, dtype=coord_datatype).reshape(lon_shape)
     measurements = np.frombuffer(decom_meas, dtype=meas_datatype).reshape(meas_shape)
-    
     end = time.time()
     logging.warning("creating numpy arrays of decompresed arrays execution time: %f",end-section_start)
 
     return([lats, lons, measurements, attributes])
 
-# replace occurences of fill_val in list
+
 def replace_fillval(data):
+    ''' replace occurences of fill_val in list '''
     for n, val in enumerate(data):
         if float(val) == -32768.0:
             data[n] = 0.0
 
+
 def zarr_to_velocity(depthIdx=0,
                     timeIdx=0,
-                    blobpath='Franfjorden32m/samples_NSEW_2013.03.11_chunked-time&depth.zarr'):
+                    blobpath='Franfjorden32m/samples_NSEW_2013.03.11_chunked-time&depth.zarr',
+                    wind_flag=True):
 
     ''' 
     Inserts netCDF data from 'startNode' in a square of size 'nGrids' in positive lat/lon
@@ -119,13 +122,17 @@ def zarr_to_velocity(depthIdx=0,
     Parameters
     ----------
     depthIdx : int
-        the depth of the grid to be computed
+        the depth of the grid to be computed !! NOT IMPLEMENTED YET
     timeIdx : string
-        the time index of the grid to be computed
-    dataset : dict
-        dictionary containing what dataset and measurement type to be computed
+        the time index of the grid to be computed !! NOT IMPLEMENTED YET
+    dataset : string
+        full path to zarr blob 
+    wind_flag : boolean
+        just to signal if wind (TRUE) velocity or ocean current (FALSE) is to be computed
     '''
 
+    # azure blob storage object
+    absstore_obj = get_blob_client(blobpath)
     dataset_name = blobpath.split('/')[0]
 
     template_path = "data/templates/velocity_template.json"
@@ -133,101 +140,60 @@ def zarr_to_velocity(depthIdx=0,
     with open(template_path, 'r') as f:
         data = json.loads(f.read())
     '''
-    eastward_wind: data[0]
-    westward_wind: data[1]
+    eastward_ ... : data[0]
+    westward_ ... : data[1]
     '''
-    #----------------------- eastward wind -----------------------
 
-    measurement_type = 'w_east'
+    # should have measurement type as input as well, but not enough time to implement..
+    if wind_flag:
+        # wind velocity
+        meas_types = ('w_east', 'w_north')
+    else:
+        # ocean current
+        meas_types = ('u_east', 'v_north')
     
-    # check if min and max values for the measure are present in the configuration file
-    if not measurement_type in config.color_enc[dataset_name]:
-        raise ValueError(f"no range registered for '{measurement_type}' in config.py")
+    for idx, meas_type in enumerate(meas_types):
+        # check if min and max values for the measure are present in the configuration file
+        if not meas_type in config.color_enc[dataset_name]:
+            raise ValueError(f"no range registered for '{meas_type}' in config.py")
+        # not using the configured min/max values yet, the +- velocities for the layer 
+        # is set in the respective fucntion in velocity-demo.js
+        logging.warning(f"configured range for {meas_type}: "
+                            f"{config.color_enc[dataset_name][meas_type]['min']} to "
+                            f"{config.color_enc[dataset_name][meas_type]['max']}")
 
-    # download z-arrays from azure cloud and decompress requested chunks
-    [lons, lats, measurements, attributes] = get_decompressed_arrays(blobpath, measurement_type, timeIdx=timeIdx, depthIdx=depthIdx)
+        # attributes (some metadata) of measurement
+        attributes = absstore_obj[f'{meas_type}/.zattrs']
 
-    logging.warning(f"configured range for {measurement_type}: "
-                        f"{config.color_enc[dataset_name][measurement_type]['min']} to "
-                        f"{config.color_enc[dataset_name][measurement_type]['max']}")
+        # decompress data
+        [lats, lons, measurements, attributes] = get_decompressed_arrays(blobpath, meas_type)
+        
+        data[idx]['header']['parameterUnit'] = attributes['units']
+        data[idx]['header']['parameterNumberName'] = attributes['standard_name']
+        # data[idx]['refTime'] = ... not implemented yet
+        # x (lon) and y (lat) resolution in degrees
+        data[idx]['header']['dx'] = abs(lons[0,0]-lons[1,0])
+        data[idx]['header']['dy'] = abs(lats[0,0]-lats[0,1])
+        # number of elements in x-y direction
+        data[idx]['header']['nx'] = len(lats[0])
+        data[idx]['header']['ny'] = len(lats)
+        # start (lon1, lat1) to end (lon2, lat2), creating square perpendicular to lat/lon axis
+        data[idx]['header']['la1']  = lats.max() # e.g. 62.8851
+        data[idx]['header']['la2']  = lats.min() # e.g. 62.7656
+        data[idx]['header']['lo1']  = lons.min() # e.g. 6.96005
+        data[idx]['header']['lo2']  = lons.max() # e.g. 7.22188
+        # the data is given as one single array
+        data[idx]['data'] = measurements.flatten().tolist()
+        # replace all fill values with 0.0
+        replace_fillval(data[idx]['data'])
+        if 'scale_factor' in attributes:
+            logging.warning(f"Applying scaling factor of {attributes['scale_factor']}")
+            for i,val in enumerate(data[idx]['data']):
+                data[idx]['data'][i] = val * attributes['scale_factor']
 
-    data[0]['header']["parameterNumberName"] = attributes['standard_name']
-
-    xgrids = len(lats)
-    ygrids = len(lats[0])
-    # This gives lat1: 7.105113983154297, lat2: 7.078174591064453
-    # i.e. Not sure if correct direction
-    # lat/lon for Leaflet is opposite  GIS
-    data[0]['header']["la1"] = lats[0,0]
-    data[0]['header']["la2"] = lats[xgrids-1,ygrids-1]
-    data[0]['header']["lo1"] = lons[0,0]
-    data[0]['header']["lo2"] = lons[xgrids-1,ygrids-1]
-
-    # xy resolution = 32m
-    data[0]['header']["dx"] = lats[0,0]-lats[1,1]
-    data[0]['header']["dy"] = lons[0,0]-lons[1,1]
-    data[0]['header']["nx"] = xgrids
-    data[0]['header']["ny"] = ygrids
-    #data[0]["refTime"] 
-    
-    # the data is given as one single array
-    data[0]['data'] = measurements.flatten().tolist()
-    replace_fillval(data[0]['data'])
-
-    
-    
-    #----------------------- nortward wind -----------------------
-
-    measurement_type = 'w_north'
-
-    # check if min and max values for the measure are present in the configuration file
-    if not measurement_type in config.color_enc[dataset_name]:
-        raise ValueError(f"no range registered for '{measurement_type}' in config.py")
-
-    # download z-arrays from azure cloud and decompress requested chunks
-    # lats/lons is changed from hereon out as lat/lon for Leaflet is opposite as GIS 
-    [lats, lons, measurements, attributes] = get_decompressed_arrays(blobpath, measurement_type, timeIdx=timeIdx, depthIdx=depthIdx)
-
-    logging.warning(f"configured range for {measurement_type}: "
-                        f"{config.color_enc[dataset_name][measurement_type]['min']} to "
-                        f"{config.color_enc[dataset_name][measurement_type]['max']}")
-
-    data[1]['header']["parameterNumberName"] = attributes['standard_name']
-
-    xgrids = len(lats)
-    ygrids = len(lats[0])
-    # This gives lat1: 7.105113983154297, lat2: 7.078174591064453
-    # i.e. Not sure if correct direction
-    data[1]['header']["la1"] = lats[0,0]
-    data[1]['header']["la2"] = lats[xgrids-1,ygrids-1]
-    data[1]['header']["lo1"] = lons[0,0]
-    data[1]['header']["lo2"] = lons[xgrids-1,0]
-
-    '''
-    print(lats.min())
-    print(lons.min())
-    print(data[1]['header']["la1"])
-    print(data[1]['header']["la2"])
-    print(data[1]['header']["lo1"])
-    print(data[1]['header']["lo2"])
-    print(xgrids)
-    print(ygrids)
-    '''
-    
-    # xy resolution = 32m
-    data[1]['header']["dx"] = lats[0,0]-lats[1,1]
-    data[1]['header']["dy"] = lons[0,0]-lons[1,1]
-    data[1]['header']["nx"] = xgrids 
-    data[1]['header']["ny"] = ygrids
-    #data[0]["refTime"] 
-    
-    # the data is given as one single array
-    data[1]['data'] = measurements.flatten().tolist()
-    replace_fillval(data[1]['data'])
+    logging.warning(f"Wind and ocean current data is now available for {dataset_name}")
 
     #with open('static/leaflet-velocity/wind-velocity.json', 'w+') as outfile:
     #    json.dump(data, outfile, indent=4, cls=JsonEncoder)
 
     return json.dumps(data, cls=JsonEncoder)
-
-zarr_to_velocity()

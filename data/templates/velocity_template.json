@@ -2,7 +2,7 @@
     {
         "header": 
         {
-            "parameterUnit": "m.s-1", 
+            "parameterUnit": "m.s", 
             "parameterNumber": 2, 
             "dx": 1.0, 
             "dy": 1.0, 
@@ -21,7 +21,7 @@
     {
         "header": 
         {
-            "parameterUnit": "m.s-1", 
+            "parameterUnit": "m.s", 
             "parameterNumber": 3, 
             "dx": 1.0, 
             "dy": 1.0, 
