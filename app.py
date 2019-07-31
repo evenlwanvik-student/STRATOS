@@ -12,11 +12,13 @@ from data.zarr_to_topo import zarr_to_topo
 from data.get_cloud_json import get_json_blob
 from data.zarr_to_velocity import zarr_to_velocity
 
+'''
 # If running outside container use this instead:
-#from data.zarr_to_geojson import z#arr_to_geojson
-#from data.zarr_to_topo import zarr_to_topo
-#from data.get_cloud_json import get_json_blob
-#from data.zarr_to_velocity import zarr_to_velocity
+from .data.zarr_to_geojson import zarr_to_geojson
+from .data.zarr_to_topo import zarr_to_topo
+from .data.get_cloud_json import get_json_blob
+from .data.zarr_to_velocity import zarr_to_velocity
+'''
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
@@ -117,21 +119,6 @@ def timelapse():
                         timeIdx=time)
 
 
-# Temporary routes used for testing purposes
-@app.route('/getGeo')
-def getGeo():
-    '''
-    # get the dataset and measurement type
-    dataset_dict = {'blobpath': request.args.get('blobpath', 'Franfjorden32m/samples_NSEW_2013.03.11_chunked-time&depth.zarr', type=str), 
-                    'measurementtype': request.args.get('datatype', "temperature", type=str)}
-    if not all(dataset_dict.values()):
-        error = f'one or more arguments are missing: {dataset_dict},  gridcells: {gridcells}, depth: {depth}, , time: {time}'
-        raise ValueError(error)
-    else:
-        logging.warning(f'trying to generate a geojson object for {dataset_dict}')
-        return zarr_to_geojson(startNode=(0,0), nGrids=290, dataset=dataset_dict)
-    '''
-    return zarr_to_geojson(startNode=(0,0), nGrids=290)
 
 @app.route('/makeTopo')
 def makeTopo():
@@ -156,14 +143,15 @@ def preMadeJSON():
 @app.route('/velocitydemo')
 def velocitydemo():
     ''' render velocity-demo template '''
-    logging.warning('redirected to "velocity-demo"')
 
+    logging.warning('redirected to "velocity-demo"')
     return render_template("velocity-demo.html")
 
 
 @app.route('/getWindVelocityVectors')
 def getWindVelocityVector():
     ''' calls function to generate a velocity json object and returns json obj layer'''
+
     logging.warning('redirected to "getWindVelocityVector"')
 
     blobpath = request.args.get('blobpath', 'Franfjorden32m/samples_NSEW_2013.03.11_chunked-time&depth.zarr', type=str)
@@ -177,6 +165,7 @@ def getWindVelocityVector():
 @app.route('/getOceanCurrentVectors')
 def getOceanCurrentVectors():
     ''' calls function to generate a velocity json object and returns json obj layer'''
+
     logging.warning('redirected to "getOceanCurrentVectors"')
 
     blobpath = request.args.get('blobpath', 'Franfjorden32m/samples_NSEW_2013.03.11_chunked-time&depth.zarr', type=str)

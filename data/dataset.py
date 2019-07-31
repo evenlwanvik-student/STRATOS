@@ -2,6 +2,7 @@ import xarray as xr
 import zarr   as  zr
 import logging
 from data.color_encoding import set_colormap_range
+#from .color_encoding import set_colormap_range
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',

@@ -48,11 +48,13 @@ class JsonEncoder(json.JSONEncoder):
 
 
 def get_initial_template():
+    ''' get the outer geojson structure template '''
     with open(initial_template_path, "r") as template:
         return json.load(template)
 
 
 def get_feature_template():
+    ''' get the template for the geojson feature dictionary '''
     return {"type": "Feature",
             "properties": {"fill": "#00aa22"},
             "geometry": {   "type": "Polygon",
@@ -76,7 +78,6 @@ def write_output(data):
 
 def get_blob_client(dataset):
     ''' create a client for the requested dataset '''
-
     CONTAINER_NAME  = 'zarr'
     ACCOUNT_NAME    = 'stratos'
     ACCOUNT_KEY     = 'A7nrOYKyq6y2GLlprXc6tmd+olu50blx4sPjdH1slTasiNl8jpVuy+V0UBWFNmwgVFSHMGP2/kmzahXcQlh+Vg=='
@@ -95,14 +96,22 @@ def get_correct_coord_dimensions(dataset_name):
         return ('gridLats', 'gridLons')
 
 
-def get_chunk_blob_encoding(blob_chunks, time):
-    ''' get the correct string for extracting correct blob, e.g. the "0.0.0.0" in 
-    client['temperature'/0.0.0.0]. The coordinates and the '''
-    def switch(x): return [f'',2,3,4][x]
-    string = switch(dim)
-
-
 def get_decompressed_arrays(dataset, depthIdx=0, timeIdx=0):
+    ''' 
+    Decompresses the measurement, latitude, and longitude for 
+    a given zarray chunk and converts it into a numpy array 
+    for further proecessing
+
+    Parameters
+    ----------
+    dataset : dict
+        dictionary containing what dataset and measurement type to be computed
+    depthIdx : int
+        the depth of the grid to be computed
+    timeIdx : string
+        the time index of the grid to be computed
+    '''
+
     # get the dataset name from blobpath "OSCAR/ ..."
     dataset_name = dataset['blobpath'].split('/')[0]
 
@@ -231,7 +240,6 @@ def zarr_to_geojson(startNode=(0,0),
                 # rounding from 16 (64bit) to 4 decimals, convert to string for json serialization
                 counter_start = time.time() 
                 # if lat/lon is a 2d array (grid coordinates)
-                
                 if coord_dims==2:
                     feature['geometry']['coordinates'].append( [
                         [round(lats[node],4), round(lons[node],4)],

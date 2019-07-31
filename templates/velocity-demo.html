@@ -4,19 +4,22 @@
 <head>
 	<title>Velocity demo</title>
 	<meta charset="utf-8">
+	<link href="../static/styleSheet.css" rel="stylesheet" type="text/css">
 </head>
 <body onload="populateDatasetMenu()">
+	<div id="map"> </div>
 
-	<div style="align-content: left;">
-		<div>
-			<label>Dataset:</label>
-			<select id="datasetMenu" name="dataset" type="text" onchange="addDatasetOptions()">
-				<option value="" diabled>-- Select --</option>
-			</select>
+	<div id="sideButtons" style="align-content: center">
+		<br>
+		<a href="/index" class="dropbtn">Back to frontpage</a>
+		<div class="dropdown">
+			<button class="dropbtn">Select dataset</button>
+			<div class="dropdown-content">
+				<select id="datasetMenu" name="dataset" type="text" onchange="addDatasetOptions()">
+					<option value="" diabled>-- Select --</option>
+				</select>
+			</div>
 		</div>
-	</div>
-	<div id="left-div">
-			<div id="map" style="align-content: top;"> </div>
 	</div>
 
 	<!--vendor-->

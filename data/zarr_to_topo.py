@@ -9,8 +9,8 @@ import zarr
 import sys
 import logging
 import warnings
-#from data.color_encoding import temp_to_rgb
-from .color_encoding import temp_to_rgb
+from data.color_encoding import temp_to_rgb
+#from .color_encoding import temp_to_rgb
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',

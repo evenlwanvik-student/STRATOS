@@ -3,10 +3,6 @@ netcdf4
 xarray
 matplotlib
 numpy
-# zarr
-''' had some problems when pip-installing "azure", error: 
-ImportError: No module named storage.blob 
-"azure-storage" did the trick, not sure if it is the same case overall '''
-azure-storage
+azure
 dask
 toolz

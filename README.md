@@ -1,160 +1,130 @@
-# Documentation for data folder
+# Stratos
 
-## 1 Modules
-### 1.1 azure_to_json.py
-This module creates a zarr azure blob storage ([ABSStore](https://zarr.readthedocs.io/en/stable/api/storage.html#zarr.storage.ABSStore) class) object, which is then used to create numpy arrays containing the measurements of the requested grid. There are [geojson](https://geojson.org/) templates are located in ```./templates/```. These templates are appended to the output object, and the data-arrays are encoded into the output geojson file, which is compatible with [Leaflet](https://leafletjs.com/).
+Summer project at SINTEF Ocean where the goal was to extract data from netCDF files from SINMOD, OSCAR and DREAM and display this data on a web page.
+We were given netCDF files as azure blobs, and we have pre-processed these files into multiple zarr-blobs which contain chunks of the netCDF data. The zarr blobs are also stored in azure. A flask server hosts a webpage where the client can request different kinds of data to inpsect. The server fetches the appropriate data from the zarr blobs, processes this data, and returns a response that can be interpreted and displayed in the browser. The back-end part of the system is written in python, while the front-end is created with html, css and javaScript code. The app runs in a docker container in the azure cloud and can be accessed here: http://sommeroppgave-stratos.azurewebsites.net/index
 
-## 2 History
-A diverse set of methods for handling the azure blob interface and extraction of relevant grids has been implemented during this project. Most of these would produce an acceptable output, but mostly within unsatisfactory time and size limits. As this is a part of a summer internship, we see it fit to document the preceding iterations such that future developers know a few of the "do's and dont's". The section of code that has been developed the most is how to get a full grid directly from the azure block blob.
+Authors: Even Wanvik and Maria Skårdal
+***************************************************
+## Usage
 
-A multitude of libraries and methods has been used to try to achieve adequate execution time and memory usage, especially in regards to retreiving the requested grid as a subarray of the blob, e.g. [0, 0, :, :] (time,depth,lat,lon). 
+## Demo web page
+* Not all datasets are fully tested and debugged, so some strange behavior might occur depending on input
+* Frænfjorden and Oscar_surface datasets have been tested the most and are recommended to use
+* Legends are just for show so do not pay attention to them. They are not related to the data as we did not prioritize to make this dynamic.
+* Color encoding is not really customized to all the different data types, so don't get caught up in this either.
+* The input fields have default values so the only thing that NEEDS to be filled out is dataset and datatype.
+* The velocity demo is heavily dependent on plugins and borrowed scripts, but the data that is displayed is still fetched from blob as per usual.
 
-##### 2.1 [STRAT-17](https://jira.code.sintef.no/browse/STRAT-17)-python-script-for-converting-a-simple-netcdf-grid-e.g-2x2-to-geojson-format
-This version sucessfully initialized a local netcdf as a [xarray](http://xarray.pydata.org/)'s dataset. It could produce a geojson output which was compatible with Leaflet.
-###### 2.1.1 Generating geojson polygons
-Takes latitudes, longitudes and the edge from which to start transversing the grid plane as input args. It returns a list which will be written to the ```"features": "geometry": "coordiniates": [[]]```:  dictionary which was in beforehand appended to the output object. To create the polygon it iterates in both y and x direction, but has to reverse the inner loop on the second outer loop iteration, as it has to traverse in a square shape and return back to its original position.
-```python
-geojson_grid_coord(lats, lons, startEdge):
-    ...
-    return [[lat,lon],[lat, ...] ...]
-```
-It was still very verbose, and with a bit too many arguments as input.
-###### 2.1.1 Main function
-The main function at this moment simply opened a local netcdf file.
-```python
-azure_to_json(depthIdx, timeIdx):
-    with xarray.open_dataset():
-        latitude = ...
-    ...
-    return jsonData
-```
-##### 2.2 [STRAT-39](https://jira.code.sintef.no/browse/STRAT-39) Use zarr arrays stored in azure for web app
-After a lot of research on the use of z-array ([zarr](https://zarr.readthedocs.io/en/stable/)), this seemed like the way to go forward. Although it is still a very young project, it has had a lot of coverage for being one of the 
+### How to run the server in docker:
+* In powershell:
+    `Set-NetConnectionProfile -interfacealias "vEthernet (DockerNAT)" -NetworkCategory Private`
+* Enable shared C-drive in docker desktop settings
+* Run these in terminal:\
+    `docker build -t stratos .`\
+    `docker run -p 80:80 stratos`
 
-## 3 zarr
-There are a lot of project working towards the best solution for storage of big data (over 50Gb) in the cloud. The "old" convention is to store data locally, but as cloud storage technology evolves there is a shift to employ cloud storage and access the data using the internet. It is possible to upload the netCDF files as either a [block blob](https://docs.microsoft.com/en-us/rest/api/storageservices/understanding-block-blobs--append-blobs--and-page-blobs) or , however this was tested and did not give satisfactory results.
+### How to push image to container registry
+1. Login to azure registry:
+    `az acr login --name stratoscontainers`
+2. Tag the image:
+    `docker tag <Image_ID> stratoscontainers.azurecr.io/name`
+3. Push it to the registry
+    `docker push stratoscontainers.azurecr.io/name`
 
-For this project, one of the main assignments was to find a viable way to display large datasets in a cloud environment. This also ment researching new methods for storage and access. Although zarr i still a very young project, it has been covered as the best of many newcomers in the field and enjoys a broad popularity within the [Unidata](https://www.unidata.ucar.edu/blogs/news/entry/netcdf-and-native-cloud-storage) community. In  short zarr is a python package providing an implementation of chunked, compressed, N-dimensional arrays. A zarr array is stored in any system that provides a key/value interface, for instance a directory in a normal file system, where keys are file names, values are file contents, and files can be read, written or deleted via the operating system.
+### Convert GeoJSON to TopoJSON
+ * `npm install -g topojson` (This requires node.js installed) 
+ * `geo2topo -q 1e4 -p -o topo.json -- geo.json` 
 
-```bash
-root.zarr
-    |-- temperature
-    |   |-- .zarray
-    |   |-- .zattrs
-    |   |-- 0.0.0.0
-    |   |-- 0.0.0.1
-    |   |-- ...
-    |
-    `-- gridLats
-        |-- ...
-```
-### 3.2 Simple tutorial when working with netcdf and zarr files
-The xarray project has a zarr backend that allows for converting to and from xarray to zarr file structure. Since this feature is still young, xarray can only open zarr datasets that have been written by xarray.
-##### 3.2.1 opening netCDF/zarr dataset in Xarray
-Simply open the netCDF dataset:
-```python
-import xarray as xr
-ds = xr.open_dataset('/path/to/mydataset.nc')
-```
-One can also open multiple datasets if they comprise a single dataset split into more than one file. If the files are properly formatted and sufficiently homogeneous, you can open them with a single line of xarray code:
-```python
-import xarray as xr
-ds = xr.open_dataset('/path/to/mydataset/*.nc')
-```
-##### 3.2.2 export to Zarr format
-The next step is to export your xarray.Dataset to a Zarr Directory Store:
-```python
-ds.to_zarr('/path/to/output/mydataset')
-```
-Xarray and Zarr have many different options for encoding and compression of the datasets. This can be passed to to_zarr via the encoding keyword argument, an example of chunking will be shown in a following step about cloud storage. 
-##### 3.2.3 create a azure blob client for zarr files
-First we need to create an interface between you, the zarr file format, and the blob storage account. [Zarr's storage module](https://zarr.readthedocs.io/en/stable/api/storage.html#module-zarr.storage) has classes for different distributed storage systems (Azure, Amazon's S3, Google Cloud Storage, ...). It's implementations of the [MutableMapping](https://docs.python.org/3/library/collections.abc.html) interface makes it easy to access the different sets of data like groups, chunks, metadata, etc. Firstly, we create our Azure Blob Client (ABS):
-```python
-import zarr
-abs_client = zarr.storage.ABSStore(container, prefix, account_name, account_key)
-```
-where ```container``` is The name of the ABS container to use, ```prefix``` the location of the "directory" to use as root of the storage hierarchy, ```account_name``` the storage account name and ```account_key``` the access key to the storage account.
-In order to use the Azure Storage clients in python, you'll need to install the [Microsoft Azure Storage SDK for Python](https://github.com/Azure/azure-storage-python). 
-##### 3.2.4 Creating/updating blob from local netcdf
-For simply creating/uploading a new Zarr blob, as long as no blob exists with the same prefix, you only need to use xarrays ```to_zarr``` function with the azure blob client as argument:
-```python
-ds.to_zarr(abs_client)
-```
-If you want to update an existing blob, you'll have to remove the existing file structure before before uploading:
-```python
-abs_client.rmdir()
-ds.to_zarr(abs_client)
-```
-It is possible to for instance append new groups to an existing blob, but this won't be covered in this tutorial as it's not relevant for this project.
-##### 3.2.5 Creating zarr blob directly from netcdf blob
-```python
-    block_blob_service = BlockBlobService(account_name, account_key)
-    #with open(output_path, 'w+') as f:
-    block_blob_service.get_blob_to_path(container_name, blob_name, output_path)
-with xr.open_dataset(netcdf_path, chunks=chunks) as ds:
-```
+*************************************************************
+# Brief summary of the whole project:
+The back end of the app is written in python, and we chose to use a flask server. 
+Initially we extracted data form the netcdf files with the python library [xarray](http://xarray.pydata.org/en/stable/). The data was then converted to the [GeoJSON](https://geojson.org/) format with functions we made from scratch. One of the reasons we wanted to use GeoJSON is that it is very compatible with [Leaflet](https://leafletjs.com/reference-1.5.0.html) which is the javaScript library we use to make the map in the browser and add data to it. Xarray proved to be slow, especially when we started fetching data from netCDF files in the cloud. So we changed gear a little and started using [Zarr](https://zarr.readthedocs.io/en/stable/) instead. Zarr is a python package that allows for convinient chunking of data, so that no more data than necessary can be extracted at a time. We converted netCDF blobs to zarr blobs, and generated GeoJSON from the data retrieved from the cloud. We were successful in generating and showing the GeoJSON data, but it wasnt't as fast as we had hoped. So we looked into using [TopoJSON](https://github.com/topojson/topojson/wiki), which is an extension of GeoJSON. THis format was more lightweight than GeoJSON, but it proved to be very difficult to generate TopoJSON from scratch. We were able to generate somehting that rendered (almost) correctly, but it was not smaller and faster than what we had already managed with geoJSON. We also tried to pregenerate topoJSON data by converting already made geoJSON files. This saves processing time, but the data still needs to be retrieved from azure blob storage, so it's not as fast as we hoped. However, pregenerated topoJSON performs better that pregenerated GeoJSON. Towards the end, we also attempted to display velocity vectors (ocean current and wind) on the map. We had moderate success here; we used a plugin and some borrowed scripts to show the vectors on the map, but this caused the rendered data to be slightly out of place (some of it was on land etc).
 
-## 4  Decapitating bottlenecks
-### 4.1 Generating geojson object
-Before we started this mission (15/07/2019), the average execution time (100 samples) for generating a geojson output object with 250 grids specified took about 6.32 seconds.
+For more thorough descriptions of what we have done the past 6 weeks see the `testing.md` file in the 'tools' folder, and the `README.md` file in the 'data'-folder.
 
-#### 4.1.1 testing deepcopy
-After a lot of testing and averaging with over 10 runs at 250 grid size, it seems like deepcopy occupies about **2.11/5.51 ~ 38.3%** of the execution time. By replacing the deepcopy call
-```python
-jsonData['features'].append(deepcopy(feature_template))
-```
-by 
-```python
-jsonData['features'].append(json.loads(json.dumps(x)))
-```
-the fraction was reduced to **1.86/5.06 ~ 36,7%**. Not a significant reduction, but i guess every little helps. 
-The next test was rather to open the ```features``` template once, and dump/load or deepcopy the template every time, maybe it is faster to just open the template every time it is to be appended?
-```python
-def get_feature_template():
-    with open(feature_template_path) as feature_json_template:
-        return json.load(feature_json_template)
-jsonData['features'].append(get_feature_template())
-```
-With this I managed to reduce the average execution time to 4.97 seconds, where appending the feature used **1.41/4.97 ~ 28%** of the total execution time, which is a almost a 10% reduction!
-Opening a file every time for n^2 grids seems a bit tedious, so the next thing on the menu was to simply have a function where the template ```feature``` dictionary is simply static code:
-```python
-def get_feature_template():
-    return {"type": "Feature",
-            "properties": {"fill": "#00aa22"},
-            "geometry": {
-                    "type": "Polygon",
-                    "coordinates": [[[ 0.0,0.0], [ 0.0,0.0], [ 0.0,0.0], [ 0.0,0.0], [ 0.0,0.0] ]]}}
-```
-This seemed to be the most effective solution by far, as it further reduced the time spent on appending the template dictionary by **0.080/3.38 ~ 2.37%**. No clue why I didn't come to this simple conclusion initially..
-Anywow, with the temlate appending only occupying 2.3% of the execution time, which is a ~36% reduction from when we appended a deepcopy of a dictionary object, we can further investigate other bottlenecks.
+*****************************************************************
+# JSON format
+JSON (JavaScript Object Notation) is a lightweight data-interchange format. It is easy for humans to read and write, and it is easy for machines to parse and generate.
 
-#### 4.1.2 appending list vs using nested loop
-The original algorithm used a nested loop which traveled in a square formation with a area of 1 geospacial index in lat/lon direction. This square makes up a polygon which is inserted into the geo
+## Alternatives to using GeoJSON
+Remarks: An advantage of using geoJSON is that it is very compatible with Leaflet. However, when the geoJSON objects become large, rendering is slow and zooming and dragging functions are very sluggish. 
+Alternative approaches:
+* Convert NetCDF to Shapefile 
+    * need three files: .shp, .dbf, .shx () 
+    * Shapefile can be displayed by Leaflet (although some suggest converting it GeoJSON..)
+    * Not a good idea according to Petter :)
+* Convert NetCDF file to GeoTIFF using GDAL
+    * GDAL is a translator library for raster/vector data
+    * GeoTIFF is raster data and can be used to generate a tilelayer to display with Leaflet
+    * Attempted this briefly, but did not succeed. It might be worth looking into again if there is time, but we are not sure if this will be faster and smaller than geoJSON
+* TopoJson
+    * Primary advantage: its smaller than GeoJSON
+    * the same output is 17 KB with GeoJSON and 5 KB with TopoJSON
+    * Downside: more complex file format, has to be converted back to GeoJSON in javaScript
+    * Could be beneficial if we are certain that rendering GeoJson data in Leaflet is fast (not sure that this is the case).
+* Use Esri's ArcGIS with ArcPy and ArcMap
+    * Disadvantage: need to purchase ArcGIS
+
+Useful site for further options: https://gisgeography.com/gis-formats/
 
 
-Tested two different methods: 
-1. Nested loop for inserting polygon coordinates into the list returned to the geojson feature the algorithm is working on. **Average execution time with 100 samples: 6.32s**. The algorithm would do something like this:
-```python
-for y in range(n)
-    for x in range(n)
-    list = []
-        for i in range(2)
-            for j in range(2)
-                list.append([lat[i,j],lon[i,j]]) 
-    feature['geometry']['coordinates'][0] = list
-```
+## TopoJSON vs GeoJSON performance
+Motivation for using TopoJSON:
+TopoJSON represents lines and polygons as sequences of arcs rather than sequences of coordinates. For the temperature grid, the polygons have shared borders, but with GeoJSON all these coordinates must be duplicated for each polygon. TopoJSO takes advantage of this redundancy. Additionally TopoJSON can be quantized, where coordinates are represented as integers instead of floating-point values with many decimal places. (We lose some information here, but but typically a small-scale map does not require the full precision of the original geometry). In order to convert the int-coordinates to latitude and longitude, the topology defines a linear transform consisting of a "scale" and "translate". The coordinates in topojson are delta-encoded such that each successive x- and y-value is relative to the previous one.
 
-2. Simply inserting a list with the given indexing for a polygon directly into the coordinates of the feature. **Average execution time with 100 samples: 5.98s**
-```python
-for y in range(n)
-    for x in range(n)
-        feature['geometry']['coordinates'].append([
-            [lats[y,x], lons[y,x]],
-            [lats[y+1,x], lons[y+1,x]],
-            ... )]
-```
+We converted a locally stored geojson file to a topojson file, and stored both files in stratos/data/outputs.
+We then requested the two different local files with jQuery in javaScript and rendered the files with leaflet:
 
-As thought, there is no significant time difference. However, it is much more readable and spends less memory, so the new method (nr. 2) is preferred.
+| Format   | File size | Content download | Time  | Total time until rendered |
+|----------|-----------|------------------|-------|---------------------------|
+| GeoJSON  | 8.5 MB    | 952.92 ms        | 1.0s  | ca 2.5 s                  |
+| TopoJSON | 2.0 MB    | 185.50 ms        | 208ms |  ca 1.5 s                 |
 
-#### 4.1.3 Reduce size of geojson object
-When we have a grid of about 200x200 measurements, the geojson object is about 8-9Mb. Since we have to define 5 edges for Leaflet to create the given polygon, and each latitude and longitude is encoded as 64 bit floats (16 decimals and 1-3 integer), each polygon spends about 20 * 5 * 2 (20 characters * 5 edges * 2 lat/lon coordinates) = 200 characters for each polygon. Let's say we have a 200x200 grid, the original size spent on defining the coordinates of the polygons would then be at 8,000,000b - 8.0Mb. When testing a 250x250 grid, the generated output file with full precision (16 decimals) was ```19.1 Mb``` and with rounding (4 decimals) it was at ```17.0 Mb```. It is not a very powerful reduction, but considering that about half of the measurements were on land, and hence won't be included in the geojson object, i believe that this will scale and have some significance for larger datasets..
+This encouraged us to continue exploring TopoJSON, and we attempted to generate a TopoJSON object from zarr-arrays in a similar manner as the GeoJSON data was produced. The recurring "JSON-serlialization" problem was solved by adding an encoder class which is called in `json.dumps()`. 
+Here is a comparison of the performance when we generated the json files upon a jQuery request:
+
+| GridCells | Function        | Generated file   | Time   | Comment                    |
+|-----------|-----------------|------------------|--------|----------------------------|
+| 290x290   |zarr_to_geojson()| 7.4 MB (Geojson) | 3.71 s |                            |
+| 290x290   | zarr_to_topo()  | 15.6 MB (Topo)   | 9.90 s | Generating all arcs        |
+| 290x290   | zarr_to_topo()  | 6.7 MB (Topo)    | 7.30 s | Disregarding NaN-temp-arcs |
+
+Unfortunately topoJSON took longer to generate than GeoJSON. It was difficult to come up with an efficient algorithm that generated topoJSON data from the zarr-arrays retrieved from azure (For specifics of the algorithms we used, see zarr_to_topo.py and read the explaining comments). We tried and failed a lot here. We did succeed at making a topojson file from scratch. However, it rendered triangles insetad of polygons for some reason, except for at the top left border, so we did something wrong in there. We did not try to fix this bug though, because the output file was larger and slower than its geoJSON counterpart. Some of the main problems were that when we generated all the arcs in the entire layer, we didn't exploit the fact that some of the gridcells were on shore and would not be rendered. This consumed both time and memory, so this solution was far from optimal. The tricky part was to keep track of which gridcell-polygons corresponded to which indeces in the comprehensive 'arcs' list. The algorithm we came up with for pairing the polygons with the correct arcs, relied on a "full" arcs list. 
+
+To avoid the unnecessary work of generating arcs that would never be used, we tried to disregard the polygons with NaN-temps when generating the TopoJSON arcs, and simply put `None` at these particular indeces in the arcs list. But this introduced another problem which was that some of the arcs between a temperature-polygon and a NaN-temp polygon were never generated. This caused an error on the client side and Leaflet complained about `Uncaught TypeError: Cannot read property 'length' of undefined`. So in order to deal with this, we tried to check if the four adjacent polygons had temperatures that were real numbers, and generate the arcs if any of them did. This type of checking caused zarr_to_topo to run even slower than if we just generated ALL the arcs.
+
+Furthermore, we were not able to figure out how to utilize the "scale" and "translate" members of the linear transform that contributes to compressing topoJSON, and how to connect this with the logic of the arc indeces. Most of the topojson examples from the internet were concerned with converting geojson data to topojson. Since we wanted to skip the geojson-making all together, this was not very helpful. All in all, the topoJSON format is more complex than GeoJSON. We did not succeed at generating output that would help us achieve faster dynamics, probably because our algorithms aren't optimal. So we abandoned the idea of making topoJSON from scratch, and stared looking into pregenerating the data instead. 
+
+NOTE: even if we did not succeed at generating topoJSON sufficietly fast in real time, there is certainly room for improvement in our (somewhat verbose) algorithms, and the topoJSON file format might still have potential.
+
+MAJOR PROBLEM:
+Things are incredibly slow when the app runs in the cloud. The same image was used both places, and the time was found by examining the F12 network tab.
+
+| GridCells | Type     | Generated file | Execution in local container | Execution in cloud |
+|-----------|----------|----------------|------------------------------|--------------------|
+| 290x290   | GeoJSON  | 7.4 MB         | 4.9 s                        |   ~ 23 sec         |
+| 290x290   | TopoJSON | 15.6 MB        | 10.5 s                       |   ~ 90 sec         |
+
+The whole idea of being able to generate something fast enough in the cloud seems to be out of reach at this point since the project is coming to a close soon.
+
+## Pre-generating JSON files and storing them as blobs
+Since the real-time making of both GeoJSON and TopoJSON files was too slow in the cloud, we looked into pregenerating these files and accessing them directly from azure blob storage. Unfortunately this also takes a while..
+
+Initially a 290x290 Frænfjorden polygon GeoJSON grid was generated and stored in a local file. Then the GeoJSON-file was uploaded to azure along with the converted TopoJSON equivalent. Both blobs were fetched with the get_json_blob function in flask, and returned to the javaScript and then rendered with Leaflet. We retrieved the blob with `block_blob_service.get_blob_to_text(CONTAINER_NAME, BLOB_NAME)`, but we did not have time to research if there are faster ways of getting the json blob from the cloud.
+
+| Type     | Size   | Local server time | Local container time | App Service time |
+|----------|--------|-------------------|----------------------|------------------|
+| GeoJSON  | 7.8 MB |      7.99 s       |        7.63 s        |      7.62 s      |
+| TopoJSON | 3.5 MB |      3.63 s       |        3.54 s        |      3.43 s      |
+
+
+Fortunately, things were now running faster in the cloud, but it was still a little sluggish. TopoJSON is clearly better than geoJSON for this purpose, if pre-generating data is a path we want to continue down. However, it should also be mentioned that it takes about 2 seconds from the package is received and downloaded on the client side until the data is rendered on the Leaflet map, so the user experience still isn't great. Also, when the json-files get too large, Leaflet struggles and hangs a lot.
+
+We did not make a python script that converts geojson to topojson, but instead we converted the files manually in the terminal. However, if conversion is to be done on a larger scale with multiple files, using a python script would certainly be the best approach.
+We ran the following commands in the directory of where the geojson files were stored:\
+ `npm install -g topojson` (This requires node.js installed) \
+ `geo2topo -q 1e4 -p -o topo.json -- geo.json` \
+ The `geo2topo` command produces the topo.json file that stores the same data as the geo.json file. We quantize the data with 1*10^4 resolution (`-q 1e4`), and this is a way of reducing the size of the TopoJSON file.
+
+
+The summer project is now at its conclusion, and although our system is not as fast and agile as we wanted it to be, we hope that our code and research might still be of use if anyone wants to pick up where we left off. In retrospective, we may have written too much of the code from scratch instead of using premade plugins (ref displaying velocity data) etc. 

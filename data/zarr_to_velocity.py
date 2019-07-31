@@ -1,11 +1,12 @@
 import zarr
 import logging
-import config
 import json
 import time
 import numpy as np
 from copy import deepcopy
 
+import config
+#from .. import config
 ''' 
 Generating a json file containing the wind/ocean velocity vectors. 
 The "leaflet-velocity" plugin is tailor-made for this application 
@@ -157,7 +158,7 @@ def zarr_to_velocity(depthIdx=0,
         if not meas_type in config.color_enc[dataset_name]:
             raise ValueError(f"no range registered for '{meas_type}' in config.py")
         # not using the configured min/max values yet, the +- velocities for the layer 
-        # is set in the respective fucntion in velocity-demo.js
+        # is set in the respective function in velocity-demo.js
         logging.warning(f"configured range for {meas_type}: "
                             f"{config.color_enc[dataset_name][meas_type]['min']} to "
                             f"{config.color_enc[dataset_name][meas_type]['max']}")
@@ -191,7 +192,7 @@ def zarr_to_velocity(depthIdx=0,
             for i,val in enumerate(data[idx]['data']):
                 data[idx]['data'][i] = val * attributes['scale_factor']
 
-    logging.warning(f"Wind and ocean current data is now available for {dataset_name}")
+    logging.warning(f"{meas_types} is now available for {dataset_name}")
 
     #with open('static/leaflet-velocity/wind-velocity.json', 'w+') as outfile:
     #    json.dump(data, outfile, indent=4, cls=JsonEncoder)

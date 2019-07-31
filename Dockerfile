@@ -20,7 +20,6 @@ EXPOSE 80
 ENV STATIC_URL /static
 ENV FLASK_APP app.py
 
-
 CMD ["python", "-m", "flask", "run", "-p", "80", "-h", "0.0.0.0"]
 
 
